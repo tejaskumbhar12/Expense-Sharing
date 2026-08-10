@@ -1,31 +1,55 @@
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { ActivityIndicator, Alert, Pressable, View } from 'react-native';
+import { ActivityIndicator, Platform, Pressable, View } from 'react-native';
 
 import { AppText, Avatar, Button, Card, Divider, EmptyState, Screen } from '@/components/ui';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import { useGroup } from '@/lib/queries/groups';
-import { useGroupMembers, useRemoveMember } from '@/lib/queries/members';
+import { useAuth } from '@/lib/auth';
+import { confirm } from '@/lib/confirm';
+import { useDeleteGroup, useGroup } from '@/lib/queries/groups';
+import { useGroupMembers, useLeaveGroup, useRemoveMember } from '@/lib/queries/members';
 import type { GroupMember } from '@/types/models';
 
 export default function GroupDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const c = useTheme();
+  const { user } = useAuth();
   const group = useGroup(id);
   const members = useGroupMembers(id);
   const removeMember = useRemoveMember(id);
+  const deleteGroup = useDeleteGroup();
+  const leaveGroup = useLeaveGroup(id);
 
-  function confirmRemove(m: GroupMember) {
-    if (m.role === 'owner') return;
-    Alert.alert('Remove member', `Remove ${m.display_name} from this group?`, [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Remove',
-        style: 'destructive',
-        onPress: () => removeMember.mutate(m.id),
-      },
-    ]);
+  const isOwner = !!user && group.data?.created_by === user.id;
+  const myMembership = members.data?.find((m) => m.user_id === user?.id);
+
+  async function confirmRemove(m: GroupMember) {
+    if (await confirm('Remove member', `Remove ${m.display_name} from this group?`, {
+      confirmLabel: 'Remove',
+      destructive: true,
+    })) {
+      removeMember.mutate(m.id);
+    }
+  }
+
+  async function confirmDelete() {
+    if (await confirm('Delete group', `Delete "${group.data?.name}"? This can't be undone.`, {
+      confirmLabel: 'Delete',
+      destructive: true,
+    })) {
+      deleteGroup.mutate(id, { onSuccess: () => router.back() });
+    }
+  }
+
+  async function confirmLeave() {
+    if (!user) return;
+    if (await confirm('Leave group', `Leave "${group.data?.name}"?`, {
+      confirmLabel: 'Leave',
+      destructive: true,
+    })) {
+      leaveGroup.mutate(user.id, { onSuccess: () => router.back() });
+    }
   }
 
   function memberSubtitle(m: GroupMember): string {
@@ -35,7 +59,22 @@ export default function GroupDetailScreen() {
 
   return (
     <Screen scroll contentStyle={{ gap: Spacing.four }}>
-      <Stack.Screen options={{ title: group.data?.name ?? 'Group' }} />
+      <Stack.Screen
+        options={{
+          title: group.data?.name ?? 'Group',
+          // RN Alert/native header handle back on device; web needs an explicit control.
+          headerLeft:
+            Platform.OS === 'web' && router.canGoBack()
+              ? () => (
+                  <Pressable onPress={() => router.back()} hitSlop={10} style={{ paddingHorizontal: 8 }}>
+                    <AppText style={{ color: c.primary, fontSize: 16, fontWeight: '600' }}>
+                      ‹ Back
+                    </AppText>
+                  </Pressable>
+                )
+              : undefined,
+        }}
+      />
 
       {group.isLoading ? (
         <View style={{ paddingTop: Spacing.six, alignItems: 'center' }}>
@@ -73,41 +112,48 @@ export default function GroupDetailScreen() {
                   <ActivityIndicator color={c.primary} />
                 </View>
               ) : (
-                (members.data ?? []).map((m, i) => (
-                  <View key={m.id}>
-                    {i > 0 ? <Divider /> : null}
-                    <Pressable
-                      onLongPress={() => confirmRemove(m)}
-                      style={({ pressed }) => ({
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        gap: Spacing.three,
-                        paddingVertical: Spacing.three,
-                        opacity: pressed ? 0.6 : 1,
-                      })}
-                    >
-                      <Avatar name={m.display_name} size={40} />
-                      <View style={{ flex: 1, gap: 2 }}>
-                        <AppText variant="body" style={{ fontWeight: '600' }}>
-                          {m.display_name}
-                        </AppText>
-                        <AppText variant="caption">{memberSubtitle(m)}</AppText>
+                (members.data ?? []).map((m, i) => {
+                  const canRemove = isOwner && m.role !== 'owner';
+                  return (
+                    <View key={m.id}>
+                      {i > 0 ? <Divider /> : null}
+                      <View
+                        style={{
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          gap: Spacing.three,
+                          paddingVertical: Spacing.three,
+                        }}
+                      >
+                        <Avatar name={m.display_name} size={40} />
+                        <View style={{ flex: 1, gap: 2 }}>
+                          <AppText variant="body" style={{ fontWeight: '600' }}>
+                            {m.display_name}
+                            {m.user_id === user?.id ? '  (you)' : ''}
+                          </AppText>
+                          <AppText variant="caption">{memberSubtitle(m)}</AppText>
+                        </View>
+                        {m.role === 'owner' ? (
+                          <AppText variant="label" color="primary">
+                            Owner
+                          </AppText>
+                        ) : canRemove ? (
+                          <Pressable hitSlop={8} onPress={() => confirmRemove(m)}>
+                            <AppText variant="label" color="danger">
+                              Remove
+                            </AppText>
+                          </Pressable>
+                        ) : !m.user_id ? (
+                          <AppText variant="label" color="warning">
+                            Invited
+                          </AppText>
+                        ) : null}
                       </View>
-                      {m.role === 'owner' ? (
-                        <AppText variant="label" color="primary">
-                          Owner
-                        </AppText>
-                      ) : !m.user_id ? (
-                        <AppText variant="label" color="warning">
-                          Invited
-                        </AppText>
-                      ) : null}
-                    </Pressable>
-                  </View>
-                ))
+                    </View>
+                  );
+                })
               )}
             </Card>
-            <AppText variant="caption">Long-press a member to remove them.</AppText>
           </View>
 
           <View style={{ gap: Spacing.two }}>
@@ -118,6 +164,24 @@ export default function GroupDetailScreen() {
                 (M4).
               </AppText>
             </Card>
+          </View>
+
+          <View style={{ marginTop: Spacing.two }}>
+            {isOwner ? (
+              <Button
+                title="Delete group"
+                variant="danger"
+                onPress={confirmDelete}
+                loading={deleteGroup.isPending}
+              />
+            ) : myMembership ? (
+              <Button
+                title="Leave group"
+                variant="secondary"
+                onPress={confirmLeave}
+                loading={leaveGroup.isPending}
+              />
+            ) : null}
           </View>
         </>
       )}

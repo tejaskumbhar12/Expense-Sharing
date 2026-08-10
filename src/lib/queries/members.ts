@@ -77,3 +77,22 @@ export function useRemoveMember(groupId: string) {
     },
   });
 }
+
+/** Current user leaves a group (removes their own membership). */
+export function useLeaveGroup(groupId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (userId: string) => {
+      const { error } = await supabase
+        .from('group_members')
+        .delete()
+        .eq('group_id', groupId)
+        .eq('user_id', userId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: qk.members(groupId) });
+      queryClient.invalidateQueries({ queryKey: qk.groups });
+    },
+  });
+}

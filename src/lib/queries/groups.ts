@@ -55,3 +55,17 @@ export function useCreateGroup() {
     },
   });
 }
+
+/** Delete a group (RLS allows the owner only). Cascades members/expenses. */
+export function useDeleteGroup() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('groups').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: qk.groups });
+    },
+  });
+}
