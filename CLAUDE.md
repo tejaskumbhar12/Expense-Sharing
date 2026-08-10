@@ -42,4 +42,11 @@ Node **≥20.19.4** required by Expo 57.
 
 ## Status
 
-M0 (scaffold/config/schema) and M1 (auth) done. Next: **M2 groups & members**.
+M0 (scaffold/config/schema), M1 (auth), M2 (groups & members) done. Next: **M3 expenses & splits**.
+
+- M2 adds `create_group` + `find_user_by_email` RPCs in `supabase/migrations/0002_groups_rpc.sql`
+  (must be run in the dashboard). App uses a `(tabs)` layout (Groups / Account); group create,
+  detail, and add-member (email lookup / manual / `expo-contacts`) live under `src/app/(app)/`.
+- Data access via React Query hooks in `src/lib/queries/`.
+- For a dev/prod build (not Expo Go), add the `expo-contacts` config plugin to `app.json` for the
+  contacts permission prompt.

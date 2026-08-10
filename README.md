@@ -31,9 +31,10 @@ A mobile app to create groups, add people, split expenses, simplify debts, and s
    > The anon key is safe to ship — access is controlled by Row Level Security.
    > **Never** put the `service_role` key in this app.
 
-4. **Run the database migration.** Dashboard → **SQL Editor** → New query → paste the contents of
-   [`supabase/migrations/0001_init.sql`](supabase/migrations/0001_init.sql) → **Run**.
-   This creates all tables, RLS policies, and the new-user trigger.
+4. **Run the database migrations.** Dashboard → **SQL Editor** → New query → paste and **Run** each
+   file in `supabase/migrations/` **in order**:
+   - [`0001_init.sql`](supabase/migrations/0001_init.sql) — tables, RLS policies, new-user trigger
+   - [`0002_groups_rpc.sql`](supabase/migrations/0002_groups_rpc.sql) — `create_group` + `find_user_by_email` RPCs (M2)
 
 5. *(Optional, speeds up testing)* Dashboard → **Authentication → Providers → Email**: turn **off**
    "Confirm email" so sign-up logs you straight in without an email round-trip.
@@ -82,7 +83,7 @@ supabase/migrations/   # SQL schema + RLS + trigger
 
 - ✅ **M0** Scaffold, config, DB schema/RLS
 - ✅ **M1** Email/password auth
-- ⬜ **M2** Groups & members (create, add by email/phone/contact)
+- ✅ **M2** Groups & members (create, add by email / manual / device contacts)
 - ⬜ **M3** Expenses & splits (equal / exact / percent / shares)
 - ⬜ **M4** Balances, debt simplification, settlements
 - ⬜ **M5** Polish (activity feed, realtime, multi-currency)

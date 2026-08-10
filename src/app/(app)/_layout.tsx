@@ -1,6 +1,25 @@
 import { Stack } from 'expo-router';
 
-// Bottom tabs will replace this Stack in a later milestone (M2).
+import { useTheme } from '@/hooks/use-theme';
+
 export default function AppLayout() {
-  return <Stack screenOptions={{ headerShown: false }} />;
+  const c = useTheme();
+  return (
+    <Stack
+      screenOptions={{
+        headerStyle: { backgroundColor: c.background },
+        headerTintColor: c.text,
+        headerShadowVisible: false,
+        contentStyle: { backgroundColor: c.background },
+      }}
+    >
+      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+      <Stack.Screen name="new-group" options={{ presentation: 'modal', title: 'New group' }} />
+      <Stack.Screen name="group/[id]/index" options={{ title: '' }} />
+      <Stack.Screen
+        name="group/[id]/add-member"
+        options={{ presentation: 'modal', title: 'Add member' }}
+      />
+    </Stack>
+  );
 }
