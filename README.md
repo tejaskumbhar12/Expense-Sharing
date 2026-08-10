@@ -1,56 +1,88 @@
-# Welcome to your Expo app 👋
+# Expense Sharing (Splitwise-style POC)
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+A mobile app to create groups, add people, split expenses, simplify debts, and settle up.
 
-## Get started
+**Stack:** Expo (React Native) + TypeScript · Supabase (Postgres + Auth + RLS) · TanStack Query.
 
-1. Install dependencies
+## Prerequisites
+
+- Node 18+ (tested on Node 20)
+- The **Expo Go** app on your phone, or an Android emulator / iOS simulator
+- A free **Supabase** account
+
+## One-time setup
+
+1. **Install dependencies** (already done if you cloned a ready tree):
 
    ```bash
    npm install
    ```
 
-2. Start the app
+2. **Create a Supabase project** at https://supabase.com → New project.
 
-   ```bash
-   npx expo start
+3. **Add your keys.** In the dashboard: **Settings → API**. Copy the **Project URL** and the
+   **anon public** key into a `.env` file (copy `.env.example`):
+
+   ```
+   EXPO_PUBLIC_SUPABASE_URL=https://YOUR-ref.supabase.co
+   EXPO_PUBLIC_SUPABASE_ANON_KEY=your-anon-public-key
    ```
 
-In the output, you'll find options to open the app in a
+   > The anon key is safe to ship — access is controlled by Row Level Security.
+   > **Never** put the `service_role` key in this app.
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+4. **Run the database migration.** Dashboard → **SQL Editor** → New query → paste the contents of
+   [`supabase/migrations/0001_init.sql`](supabase/migrations/0001_init.sql) → **Run**.
+   This creates all tables, RLS policies, and the new-user trigger.
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+5. *(Optional, speeds up testing)* Dashboard → **Authentication → Providers → Email**: turn **off**
+   "Confirm email" so sign-up logs you straight in without an email round-trip.
 
-## Get a fresh project
-
-When you're ready, run:
+## Run
 
 ```bash
-npm run reset-project
+npx expo start -c
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+Then press `a` (Android emulator), `i` (iOS simulator), `w` (web), or scan the QR with Expo Go.
+The `-c` clears the cache — always use it after changing `.env`.
 
-### Other setup steps
+## Verify auth works
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+- Sign up with an email + password → a row appears in **Authentication → Users** and in the
+  `profiles` table.
+- Sign out, sign back in.
+- Killing/reopening the app keeps you signed in (session persisted).
 
-## Learn more
+## Test & typecheck
 
-To learn more about developing your project with Expo, look at the following resources:
+```bash
+npm test          # unit tests for split + debt math
+npm run typecheck # tsc --noEmit
+```
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+## Project layout
 
-## Join the community
+```
+src/
+  app/                 # expo-router routes
+    (auth)/            # sign-in, sign-up
+    (app)/             # home (groups land here in M2)
+  components/ui.tsx    # small themed UI kit
+  lib/
+    supabase.ts        # client (+ AsyncStorage session)
+    auth.tsx           # AuthProvider / useAuth
+    split.ts           # split calculators (integer minor units)
+    debt.ts            # balances + debt simplification
+  types/models.ts      # DB row shapes
+supabase/migrations/   # SQL schema + RLS + trigger
+```
 
-Join our community of developers creating universal apps.
+## Milestone status
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+- ✅ **M0** Scaffold, config, DB schema/RLS
+- ✅ **M1** Email/password auth
+- ⬜ **M2** Groups & members (create, add by email/phone/contact)
+- ⬜ **M3** Expenses & splits (equal / exact / percent / shares)
+- ⬜ **M4** Balances, debt simplification, settlements
+- ⬜ **M5** Polish (activity feed, realtime, multi-currency)
