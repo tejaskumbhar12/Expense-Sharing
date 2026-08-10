@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, View } from 'react-native';
+import { Platform, Pressable, View } from 'react-native';
 
 import { AppText, Button, Screen, TextField } from '@/components/ui';
 import { Spacing } from '@/constants/theme';
@@ -76,6 +76,13 @@ export default function NewGroupScreen() {
       ) : null}
 
       <Button title="Create group" onPress={onCreate} loading={create.isPending} />
+      {Platform.OS === 'web' ? (
+        <Button
+          title="Cancel"
+          variant="ghost"
+          onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))}
+        />
+      ) : null}
     </Screen>
   );
 }

@@ -1,5 +1,5 @@
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { ActivityIndicator, Platform, Pressable, View } from 'react-native';
+import { ActivityIndicator, Pressable, View } from 'react-native';
 
 import { AppText, Avatar, Button, Card, Divider, EmptyState, Screen } from '@/components/ui';
 import { Spacing } from '@/constants/theme';
@@ -59,22 +59,15 @@ export default function GroupDetailScreen() {
 
   return (
     <Screen scroll contentStyle={{ gap: Spacing.four }}>
-      <Stack.Screen
-        options={{
-          title: group.data?.name ?? 'Group',
-          // RN Alert/native header handle back on device; web needs an explicit control.
-          headerLeft:
-            Platform.OS === 'web' && router.canGoBack()
-              ? () => (
-                  <Pressable onPress={() => router.back()} hitSlop={10} style={{ paddingHorizontal: 8 }}>
-                    <AppText style={{ color: c.primary, fontSize: 16, fontWeight: '600' }}>
-                      ‹ Back
-                    </AppText>
-                  </Pressable>
-                )
-              : undefined,
-        }}
-      />
+      <Stack.Screen options={{ title: group.data?.name ?? 'Group' }} />
+
+      {/* Native header shows a back button only when there's navigation history;
+          on a direct load / reload there's none, so fall back to an inline link. */}
+      {!router.canGoBack() ? (
+        <Pressable onPress={() => router.replace('/')} hitSlop={8} style={{ alignSelf: 'flex-start' }}>
+          <AppText style={{ color: c.primary, fontSize: 16, fontWeight: '600' }}>‹ Back</AppText>
+        </Pressable>
+      ) : null}
 
       {group.isLoading ? (
         <View style={{ paddingTop: Spacing.six, alignItems: 'center' }}>

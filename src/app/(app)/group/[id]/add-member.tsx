@@ -143,6 +143,13 @@ export default function AddMemberScreen() {
           <Button title="Add member" onPress={addManual} loading={busy} />
         </View>
       )}
+      {Platform.OS === 'web' ? (
+        <Button
+          title="Cancel"
+          variant="ghost"
+          onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))}
+        />
+      ) : null}
     </Screen>
   );
 }
