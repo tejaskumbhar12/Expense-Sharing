@@ -28,27 +28,29 @@ export default function AddMemberScreen() {
   const [addedKeys, setAddedKeys] = useState<Set<string>>(new Set());
   const [lastAdded, setLastAdded] = useState<string | null>(null);
 
-  const keyOf = (p: KnownPerson) =>
+  const keyOf = (p: { user_id: string | null; email: string | null; display_name: string }) =>
     p.user_id
       ? `u:${p.user_id}`
       : p.email
         ? `e:${p.email.toLowerCase()}`
-        : `n:${p.display_name.toLowerCase()}`;
+        : `n:${p.display_name.trim().toLowerCase()}`;
 
+  // Identity keys of everyone already in this group (user_id > email > name),
+  // so a name-only placeholder is also detected as already present.
+  const memberKeys = useMemo(
+    () => new Set((members.data ?? []).map(keyOf)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [members.data]
+  );
   // People from the user's other groups who aren't already in this one.
-  const candidates = useMemo(() => {
-    const memberUserIds = new Set(
-      (members.data ?? []).map((m) => m.user_id).filter((v): v is string => !!v)
-    );
-    const memberEmails = new Set(
-      (members.data ?? []).map((m) => m.email?.toLowerCase()).filter((v): v is string => !!v)
-    );
-    return (known.data ?? []).filter((p) => {
-      if (p.user_id && memberUserIds.has(p.user_id)) return false;
-      if (p.email && memberEmails.has(p.email.toLowerCase())) return false;
-      return true;
-    });
-  }, [known.data, members.data]);
+  const candidates = useMemo(
+    () => (known.data ?? []).filter((p) => !memberKeys.has(keyOf(p))),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [known.data, memberKeys]
+  );
+
+  const alreadyMember = (p: { user_id: string | null; email: string | null; display_name: string }) =>
+    memberKeys.has(keyOf(p));
 
   async function addKnown(p: KnownPerson) {
     setError(null);
@@ -81,11 +83,13 @@ export default function AddMemberScreen() {
     setBusy(true);
     try {
       const found = await findUserByEmail(e);
-      await add.mutateAsync({
+      const person = {
         display_name: found?.full_name || e.split('@')[0],
         email: found?.email ?? e,
         user_id: found?.id ?? null,
-      });
+      };
+      if (alreadyMember(person)) return setError('That person is already in this group.');
+      await add.mutateAsync(person);
       router.back();
     } catch (err) {
       setError((err as Error).message);
@@ -101,12 +105,14 @@ export default function AddMemberScreen() {
     try {
       const e = email.trim();
       const found = e && EMAIL_RE.test(e) ? await findUserByEmail(e) : null;
-      await add.mutateAsync({
+      const person = {
         display_name: name.trim(),
         email: e || null,
         phone: phone.trim() || null,
         user_id: found?.id ?? null,
-      });
+      };
+      if (alreadyMember(person)) return setError('That person is already in this group.');
+      await add.mutateAsync(person);
       router.back();
     } catch (err) {
       setError((err as Error).message);

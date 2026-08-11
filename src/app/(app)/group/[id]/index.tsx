@@ -5,6 +5,7 @@ import { ActivityIndicator, Pressable, RefreshControl, Switch, View } from 'reac
 import {
   AppText,
   Avatar,
+  BalanceLabel,
   Button,
   Card,
   Divider,
@@ -303,18 +304,7 @@ export default function GroupDetailScreen() {
                             {b.member.display_name}
                             {b.member.user_id === user?.id ? '  (you)' : ''}
                           </AppText>
-                          {b.balanceMinor === 0 ? (
-                            <AppText variant="caption">settled</AppText>
-                          ) : (
-                            <AppText
-                              variant="body"
-                              color={b.balanceMinor > 0 ? 'positive' : 'negative'}
-                              style={{ fontWeight: '700' }}
-                            >
-                              {b.balanceMinor > 0 ? 'gets ' : 'owes '}
-                              {formatMoney(Math.abs(b.balanceMinor), currency)}
-                            </AppText>
-                          )}
+                          <BalanceLabel balanceMinor={b.balanceMinor} currency={currency} />
                         </View>
                       </View>
                     ))}
@@ -345,23 +335,34 @@ export default function GroupDetailScreen() {
                     {suggested.map((t, i) => (
                       <View
                         key={i}
-                        style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.two }}
+                        style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.three }}
                       >
-                        <AppText variant="body" style={{ flex: 1 }}>
-                          {t.from.display_name} → {t.to.display_name}
-                        </AppText>
-                        <AppText variant="body" style={{ fontWeight: '700' }}>
-                          {formatMoney(t.amountMinor, currency)}
-                        </AppText>
-                        <Button
-                          title="Settle"
-                          variant="ghost"
+                        <View style={{ flex: 1, gap: 2 }}>
+                          <AppText variant="body" style={{ fontWeight: '600' }}>
+                            {t.from.display_name} → {t.to.display_name}
+                          </AppText>
+                          <AppText variant="caption">
+                            {formatMoney(t.amountMinor, currency)}
+                          </AppText>
+                        </View>
+                        <Pressable
                           onPress={() =>
                             router.push(
                               `/group/${id}/settle?from=${t.from.id}&to=${t.to.id}&amount=${fromMinor(t.amountMinor)}`
                             )
                           }
-                        />
+                          style={({ pressed }) => ({
+                            backgroundColor: c.primary,
+                            paddingVertical: Spacing.two,
+                            paddingHorizontal: Spacing.four,
+                            borderRadius: 999,
+                            opacity: pressed ? 0.85 : 1,
+                          })}
+                        >
+                          <AppText variant="label" style={{ color: c.primaryText }}>
+                            Settle
+                          </AppText>
+                        </Pressable>
                       </View>
                     ))}
                   </Card>
@@ -478,10 +479,7 @@ export default function GroupDetailScreen() {
                                 Owner
                               </AppText>
                             ) : m.user_id === user?.id ? null : bal == null ? null : bal !== 0 ? (
-                              <AppText variant="label" color="warning">
-                                {bal > 0 ? 'gets ' : 'owes '}
-                                {formatMoney(Math.abs(bal), currency)}
-                              </AppText>
+                              <BalanceLabel balanceMinor={bal} currency={currency} />
                             ) : (
                               <Pressable hitSlop={8} onPress={() => confirmRemove(m)}>
                                 <AppText variant="label" color="danger">

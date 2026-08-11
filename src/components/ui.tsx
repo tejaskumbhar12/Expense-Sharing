@@ -22,6 +22,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { formatMoney } from '@/lib/format';
 
 type ThemeColors = ReturnType<typeof useTheme>;
 
@@ -295,6 +296,28 @@ export function EmptyState({
       ) : null}
       {action ? <View style={{ marginTop: 12 }}>{action}</View> : null}
     </View>
+  );
+}
+
+/** Consistent "gets / owes <amount>" label used wherever a net balance shows. */
+export function BalanceLabel({
+  balanceMinor,
+  currency,
+}: {
+  balanceMinor: number;
+  currency: string;
+}) {
+  if (balanceMinor === 0)
+    return (
+      <AppText variant="label" color="textSecondary">
+        settled
+      </AppText>
+    );
+  return (
+    <AppText variant="label" color={balanceMinor > 0 ? 'positive' : 'warning'}>
+      {balanceMinor > 0 ? 'gets ' : 'owes '}
+      {formatMoney(Math.abs(balanceMinor), currency)}
+    </AppText>
   );
 }
 
