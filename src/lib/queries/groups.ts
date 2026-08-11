@@ -56,6 +56,23 @@ export function useCreateGroup() {
   });
 }
 
+/** Update a group's settings (e.g. the simplify-debts toggle). */
+export function useUpdateGroupSettings() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (args: { id: string; simplify_debts: boolean }) => {
+      const { error } = await supabase
+        .from('groups')
+        .update({ simplify_debts: args.simplify_debts })
+        .eq('id', args.id);
+      if (error) throw error;
+    },
+    onSuccess: (_data, args) => {
+      queryClient.invalidateQueries({ queryKey: qk.group(args.id) });
+    },
+  });
+}
+
 /** Delete a group (RLS allows the owner only). Cascades members/expenses. */
 export function useDeleteGroup() {
   const queryClient = useQueryClient();

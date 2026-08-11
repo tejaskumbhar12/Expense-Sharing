@@ -1,19 +1,16 @@
 import { useRouter } from 'expo-router';
 import { ActivityIndicator, FlatList, Pressable, RefreshControl, View } from 'react-native';
 
-import { AppText, Avatar, Button, Card, EmptyState, FAB, Screen } from '@/components/ui';
+import { AppText, Button, Card, EmptyState, Screen } from '@/components/ui';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import { useAuth } from '@/lib/auth';
-import { useGroups } from '@/lib/queries/groups';
-import { useGroupsRealtime } from '@/lib/queries/realtime';
+import { useActivity } from '@/lib/queries/activity';
+import { formatMoney } from '@/lib/format';
 
-export default function GroupsScreen() {
+export default function ActivityScreen() {
   const router = useRouter();
   const c = useTheme();
-  const { data: groups, isLoading, error, refetch, isRefetching } = useGroups();
-  const { user } = useAuth();
-  useGroupsRealtime(user?.id);
+  const { data, isLoading, error, refetch, isRefetching } = useActivity();
 
   if (isLoading) {
     return (
@@ -29,7 +26,7 @@ export default function GroupsScreen() {
     return (
       <Screen edges={['bottom']}>
         <EmptyState
-          title="Couldn't load groups"
+          title="Couldn't load activity"
           subtitle={(error as Error).message}
           action={<Button title="Retry" variant="secondary" onPress={() => refetch()} />}
         />
@@ -40,23 +37,26 @@ export default function GroupsScreen() {
   return (
     <Screen edges={['bottom']}>
       <FlatList
-        data={groups}
-        keyExtractor={(g) => g.id}
+        data={data}
+        keyExtractor={(it) => `${it.kind}-${it.id}`}
         contentContainerStyle={{ padding: Spacing.four, gap: Spacing.three, flexGrow: 1 }}
         refreshControl={
           <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={c.primary} />
         }
         ListEmptyComponent={
           <EmptyState
-            title="No groups yet"
-            subtitle="Create a group for a trip, flat, or friends to start splitting expenses."
-            action={<Button title="Create a group" onPress={() => router.push('/new-group')} />}
+            title="No activity yet"
+            subtitle="Add an expense or record a payment and it shows up here."
           />
         }
         renderItem={({ item }) => (
           <Card style={{ padding: 0, overflow: 'hidden' }}>
             <Pressable
-              onPress={() => router.push(`/group/${item.id}`)}
+              onPress={() =>
+                item.kind === 'expense'
+                  ? router.push(`/group/${item.groupId}/expense/${item.id}`)
+                  : router.push(`/group/${item.groupId}`)
+              }
               style={({ pressed }) => ({
                 flexDirection: 'row',
                 alignItems: 'center',
@@ -65,23 +65,31 @@ export default function GroupsScreen() {
                 opacity: pressed ? 0.6 : 1,
               })}
             >
-              <Avatar name={item.name} size={44} />
-              <View style={{ flex: 1, gap: 2 }}>
-                <AppText variant="body" style={{ fontWeight: '700' }}>
-                  {item.name}
-                </AppText>
-                <AppText variant="caption">
-                  {item.memberCount} {item.memberCount === 1 ? 'member' : 'members'} · {item.currency}
-                </AppText>
+              <View
+                style={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: 20,
+                  backgroundColor: c.backgroundElement,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <AppText style={{ fontSize: 18 }}>{item.kind === 'expense' ? '🧾' : '💸'}</AppText>
               </View>
-              <AppText variant="heading" color="textSecondary">
-                ›
+              <View style={{ flex: 1, gap: 2 }}>
+                <AppText variant="body" style={{ fontWeight: '600' }}>
+                  {item.title}
+                </AppText>
+                <AppText variant="caption">{item.subtitle}</AppText>
+              </View>
+              <AppText variant="body" style={{ fontWeight: '700' }}>
+                {formatMoney(item.amountMinor, item.currency)}
               </AppText>
             </Pressable>
           </Card>
         )}
       />
-      <FAB label="New group" onPress={() => router.push('/new-group')} />
     </Screen>
   );
 }

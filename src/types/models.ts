@@ -21,6 +21,7 @@ export interface Group {
   name: string;
   created_by: string;
   currency: string;
+  simplify_debts: boolean;
   created_at: string;
 }
 

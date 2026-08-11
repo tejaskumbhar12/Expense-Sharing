@@ -55,6 +55,7 @@ export function useCreateSettlement(groupId: string) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: qk.settlements(groupId) });
       queryClient.invalidateQueries({ queryKey: qk.balances(groupId) });
+      queryClient.invalidateQueries({ queryKey: qk.activity });
     },
   });
 }
@@ -69,6 +70,7 @@ export function useDeleteSettlement(groupId: string) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: qk.settlements(groupId) });
       queryClient.invalidateQueries({ queryKey: qk.balances(groupId) });
+      queryClient.invalidateQueries({ queryKey: qk.activity });
     },
   });
 }

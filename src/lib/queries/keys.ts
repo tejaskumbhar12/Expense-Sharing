@@ -7,4 +7,5 @@ export const qk = {
   expense: (expenseId: string) => ['expenses', expenseId] as const,
   balances: (groupId: string) => ['groups', groupId, 'balances'] as const,
   settlements: (groupId: string) => ['groups', groupId, 'settlements'] as const,
+  activity: ['activity'] as const,
 };

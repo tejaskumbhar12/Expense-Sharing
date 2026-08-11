@@ -24,6 +24,13 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
+        name="activity"
+        options={{
+          title: 'Activity',
+          tabBarIcon: ({ color }) => <Text style={{ fontSize: 18, color }}>🧾</Text>,
+        }}
+      />
+      <Tabs.Screen
         name="account"
         options={{
           title: 'Account',

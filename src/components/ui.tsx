@@ -9,6 +9,7 @@ import {
   Pressable,
   PressableProps,
   ScrollView,
+  ScrollViewProps,
   StyleSheet,
   Text,
   TextInput,
@@ -32,18 +33,27 @@ export function Screen({
   scroll = false,
   contentStyle,
   edges,
+  refreshControl,
   ...rest
-}: ViewProps & { scroll?: boolean; contentStyle?: ViewProps['style']; edges?: Edge[] }) {
+}: ViewProps & {
+  scroll?: boolean;
+  contentStyle?: ViewProps['style'];
+  edges?: Edge[];
+  refreshControl?: ScrollViewProps['refreshControl'];
+}) {
   const c = useTheme();
-  const Inner = scroll ? ScrollView : View;
   return (
     <SafeAreaView edges={edges} style={[{ flex: 1, backgroundColor: c.background }]} {...rest}>
-      <Inner
-        style={scroll ? undefined : [{ flex: 1 }, contentStyle]}
-        contentContainerStyle={scroll ? [{ padding: Spacing.four }, contentStyle] : undefined}
-      >
-        {children}
-      </Inner>
+      {scroll ? (
+        <ScrollView
+          contentContainerStyle={[{ padding: Spacing.four }, contentStyle]}
+          refreshControl={refreshControl}
+        >
+          {children}
+        </ScrollView>
+      ) : (
+        <View style={[{ flex: 1 }, contentStyle]}>{children}</View>
+      )}
     </SafeAreaView>
   );
 }

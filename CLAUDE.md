@@ -42,8 +42,13 @@ Node **≥20.19.4** required by Expo 57.
 
 ## Status
 
-M0-M4 done (auth, groups/members, expenses/splits, balances + debt-simplify + settlements).
-Next: **M5 polish** (activity feed, Realtime live updates, multi-currency, avatars).
+M0-M5 done — full POC. Auth, groups/members, expenses/splits, balances + debt-simplify +
+settlements, and polish (Realtime, persisted simplify toggle, activity feed, pull-to-refresh).
+
+- M5: `src/lib/queries/realtime.ts` subscribes to Realtime and invalidates React Query;
+  `groups.simplify_debts` (migration 0005) persists the toggle via `useUpdateGroupSettings`;
+  `src/lib/queries/activity.ts` + `(tabs)/activity.tsx` merge recent expenses + payments across
+  groups. Realtime needs tables in the `supabase_realtime` publication (0005).
 
 - Balances derived client-side in `src/lib/queries/balances.ts` via `computeBalances` +
   `simplifyDebts` (`src/lib/debt.ts`); settlements via `src/lib/queries/settlements.ts`. Group

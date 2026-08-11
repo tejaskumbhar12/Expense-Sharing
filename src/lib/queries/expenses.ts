@@ -89,6 +89,7 @@ export function useCreateExpense(groupId: string) {
       queryClient.invalidateQueries({ queryKey: qk.expenses(groupId) });
       queryClient.invalidateQueries({ queryKey: qk.group(groupId) });
       queryClient.invalidateQueries({ queryKey: qk.balances(groupId) });
+      queryClient.invalidateQueries({ queryKey: qk.activity });
     },
   });
 }
@@ -115,6 +116,7 @@ export function useUpdateExpense(groupId: string) {
       queryClient.invalidateQueries({ queryKey: qk.expenses(groupId) });
       queryClient.invalidateQueries({ queryKey: qk.expense(args.expenseId) });
       queryClient.invalidateQueries({ queryKey: qk.balances(groupId) });
+      queryClient.invalidateQueries({ queryKey: qk.activity });
     },
   });
 }
@@ -130,6 +132,7 @@ export function useDeleteExpense(groupId: string) {
       queryClient.invalidateQueries({ queryKey: qk.expenses(groupId) });
       queryClient.invalidateQueries({ queryKey: qk.group(groupId) });
       queryClient.invalidateQueries({ queryKey: qk.balances(groupId) });
+      queryClient.invalidateQueries({ queryKey: qk.activity });
     },
   });
 }

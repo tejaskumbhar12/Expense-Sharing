@@ -1,6 +1,6 @@
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { useState } from 'react';
-import { ActivityIndicator, Pressable, Switch, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, Pressable, RefreshControl, Switch, View } from 'react-native';
 
 import { AppText, Avatar, Button, Card, Divider, EmptyState, Screen } from '@/components/ui';
 import { Spacing } from '@/constants/theme';
@@ -9,8 +9,9 @@ import { useAuth } from '@/lib/auth';
 import { confirm } from '@/lib/confirm';
 import { useGroupBalances } from '@/lib/queries/balances';
 import { useExpenses } from '@/lib/queries/expenses';
-import { useDeleteGroup, useGroup } from '@/lib/queries/groups';
+import { useDeleteGroup, useGroup, useUpdateGroupSettings } from '@/lib/queries/groups';
 import { useGroupMembers, useLeaveGroup, useRemoveMember } from '@/lib/queries/members';
+import { useGroupRealtime } from '@/lib/queries/realtime';
 import { useDeleteSettlement, useSettlements, type SettlementView } from '@/lib/queries/settlements';
 import { formatMoney } from '@/lib/format';
 import { fromMinor, toMinor } from '@/lib/split';
@@ -30,13 +31,37 @@ export default function GroupDetailScreen() {
   const balances = useGroupBalances(id);
   const settlements = useSettlements(id);
   const deleteSettlement = useDeleteSettlement(id);
+  const updateSettings = useUpdateGroupSettings();
+  useGroupRealtime(id);
   const currency = group.data?.currency ?? 'INR';
+
   const [simplify, setSimplify] = useState(true);
+  useEffect(() => {
+    if (group.data) setSimplify(group.data.simplify_debts);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [group.data?.simplify_debts]);
+  const onToggleSimplify = (v: boolean) => {
+    setSimplify(v);
+    updateSettings.mutate({ id, simplify_debts: v });
+  };
   const suggested = balances.data
     ? simplify
       ? balances.data.transfers
       : balances.data.directTransfers
     : [];
+
+  const [refreshing, setRefreshing] = useState(false);
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await Promise.all([
+      group.refetch(),
+      members.refetch(),
+      expenses.refetch(),
+      balances.refetch(),
+      settlements.refetch(),
+    ]);
+    setRefreshing(false);
+  };
 
   const isOwner = !!user && group.data?.created_by === user.id;
   const myMembership = members.data?.find((m) => m.user_id === user?.id);
@@ -87,7 +112,13 @@ export default function GroupDetailScreen() {
   }
 
   return (
-    <Screen scroll contentStyle={{ gap: Spacing.four }}>
+    <Screen
+      scroll
+      contentStyle={{ gap: Spacing.four }}
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={c.primary} />
+      }
+    >
       <Stack.Screen options={{ title: group.data?.name ?? 'Group' }} />
 
       {/* Native header shows a back button only when there's navigation history;
@@ -238,7 +269,7 @@ export default function GroupDetailScreen() {
                 </View>
                 <Switch
                   value={simplify}
-                  onValueChange={setSimplify}
+                  onValueChange={onToggleSimplify}
                   trackColor={{ true: c.primary, false: c.border }}
                 />
               </View>
