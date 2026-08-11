@@ -73,6 +73,7 @@ receipts + CSV export.
   add-edit/detail live under `src/app/(app)/group/[id]/`.
 - `src/components/SplitEditor.tsx` drives all 4 split types via `src/lib/split.ts` (minor units).
 - Data access via React Query hooks in `src/lib/queries/`.
-- Web quirks handled: RN `Alert` is a no-op on web → use `src/lib/confirm.ts`; web modals/detail get
+- Confirmations use an in-app modal (`src/components/ConfirmProvider.tsx` + `useConfirm()`), not RN
+  `Alert` / `window.confirm` (both unreliable on mobile web / iOS Safari). Web modals/detail get
   inline Cancel/Back controls (native uses the header).
 - For a dev/prod build (not Expo Go), add the `expo-contacts` config plugin to `app.json`.

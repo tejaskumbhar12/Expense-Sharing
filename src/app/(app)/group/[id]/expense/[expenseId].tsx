@@ -4,7 +4,7 @@ import { ActivityIndicator, Image, Pressable, View } from 'react-native';
 import { AppText, Avatar, Button, Card, Divider, EmptyState, Screen } from '@/components/ui';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import { confirm } from '@/lib/confirm';
+import { useConfirm } from '@/components/ConfirmProvider';
 import { useDeleteExpense, useExpense } from '@/lib/queries/expenses';
 import { formatMoney } from '@/lib/format';
 import { toMinor } from '@/lib/split';
@@ -21,6 +21,7 @@ export default function ExpenseDetailScreen() {
   const { id, expenseId } = useLocalSearchParams<{ id: string; expenseId: string }>();
   const router = useRouter();
   const c = useTheme();
+  const confirm = useConfirm();
   const expense = useExpense(expenseId);
   const del = useDeleteExpense(id);
 

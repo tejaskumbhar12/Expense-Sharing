@@ -6,6 +6,7 @@ import { ActivityIndicator, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { ConfirmProvider } from '@/components/ConfirmProvider';
 import { AuthProvider, useAuth } from '@/lib/auth';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -44,8 +45,10 @@ export default function RootLayout() {
       <SafeAreaProvider>
         <QueryClientProvider client={queryClient}>
           <AuthProvider>
-            <RootNavigator />
-            <StatusBar style="auto" />
+            <ConfirmProvider>
+              <RootNavigator />
+              <StatusBar style="auto" />
+            </ConfirmProvider>
           </AuthProvider>
         </QueryClientProvider>
       </SafeAreaProvider>

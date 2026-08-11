@@ -14,8 +14,8 @@ import {
 } from '@/components/ui';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { useConfirm } from '@/components/ConfirmProvider';
 import { useAuth } from '@/lib/auth';
-import { confirm } from '@/lib/confirm';
 import { useGroupBalances } from '@/lib/queries/balances';
 import { useExpenses } from '@/lib/queries/expenses';
 import { useDeleteGroup, useGroup, useUpdateGroupSettings } from '@/lib/queries/groups';
@@ -33,6 +33,7 @@ export default function GroupDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const c = useTheme();
+  const confirm = useConfirm();
   const { user } = useAuth();
   const group = useGroup(id);
   const members = useGroupMembers(id);
