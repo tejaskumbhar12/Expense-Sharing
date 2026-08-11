@@ -2,7 +2,16 @@ import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, RefreshControl, Switch, View } from 'react-native';
 
-import { AppText, Avatar, Button, Card, Divider, EmptyState, Screen } from '@/components/ui';
+import {
+  AppText,
+  Avatar,
+  Button,
+  Card,
+  Divider,
+  EmptyState,
+  Screen,
+  SegmentedControl,
+} from '@/components/ui';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useAuth } from '@/lib/auth';
@@ -17,6 +26,8 @@ import { formatMoney } from '@/lib/format';
 import { buildGroupHtml, exportGroupPdf } from '@/lib/pdf';
 import { fromMinor, toMinor } from '@/lib/split';
 import type { GroupMember } from '@/types/models';
+
+type Tab = 'expenses' | 'balances' | 'members';
 
 export default function GroupDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -35,6 +46,8 @@ export default function GroupDetailScreen() {
   const updateSettings = useUpdateGroupSettings();
   useGroupRealtime(id);
   const currency = group.data?.currency ?? 'INR';
+
+  const [tab, setTab] = useState<Tab>('expenses');
 
   const [simplify, setSimplify] = useState(true);
   useEffect(() => {
@@ -163,294 +176,315 @@ export default function GroupDetailScreen() {
             </View>
           </View>
 
-          <View style={{ gap: Spacing.two }}>
-            <View
-              style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}
-            >
-              <AppText variant="heading">Members</AppText>
-              <Button
-                title="Add"
-                variant="ghost"
-                onPress={() => router.push(`/group/${id}/add-member`)}
-              />
-            </View>
+          <SegmentedControl<Tab>
+            value={tab}
+            onChange={setTab}
+            options={[
+              { value: 'expenses', label: 'Expenses' },
+              { value: 'balances', label: 'Balances' },
+              { value: 'members', label: 'Members' },
+            ]}
+          />
 
-            <Card style={{ padding: 0, paddingHorizontal: Spacing.four }}>
-              {members.isLoading ? (
+          {/* ---------- Expenses ---------- */}
+          {tab === 'expenses' ? (
+            <View style={{ gap: Spacing.two }}>
+              <View
+                style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}
+              >
+                <AppText variant="heading">Expenses</AppText>
+                <Button
+                  title="Add"
+                  variant="ghost"
+                  onPress={() => router.push(`/group/${id}/add-expense`)}
+                />
+              </View>
+
+              {expenses.isLoading ? (
                 <View style={{ padding: Spacing.four, alignItems: 'center' }}>
                   <ActivityIndicator color={c.primary} />
                 </View>
+              ) : (expenses.data?.length ?? 0) === 0 ? (
+                <Card>
+                  <AppText variant="caption">No expenses yet. Tap Add to record the first one.</AppText>
+                </Card>
               ) : (
-                (members.data ?? []).map((m, i) => {
-                  const canRemove = isOwner && m.role !== 'owner';
-                  return (
-                    <View key={m.id}>
+                <Card style={{ padding: 0, paddingHorizontal: Spacing.four }}>
+                  {expenses.data!.map((exp, i) => (
+                    <View key={exp.id}>
                       {i > 0 ? <Divider /> : null}
-                      <View
-                        style={{
+                      <Pressable
+                        onPress={() => router.push(`/group/${id}/expense/${exp.id}`)}
+                        style={({ pressed }) => ({
                           flexDirection: 'row',
                           alignItems: 'center',
                           gap: Spacing.three,
                           paddingVertical: Spacing.three,
-                        }}
+                          opacity: pressed ? 0.6 : 1,
+                        })}
                       >
-                        <Avatar name={m.display_name} size={40} />
                         <View style={{ flex: 1, gap: 2 }}>
                           <AppText variant="body" style={{ fontWeight: '600' }}>
-                            {m.display_name}
-                            {m.user_id === user?.id ? '  (you)' : ''}
+                            {exp.description}
                           </AppText>
-                          <AppText variant="caption">{memberSubtitle(m)}</AppText>
+                          <AppText variant="caption">
+                            {exp.payer?.display_name ?? 'someone'} paid · {exp.spent_at}
+                          </AppText>
                         </View>
-                        {m.role === 'owner' ? (
-                          <AppText variant="label" color="primary">
-                            Owner
-                          </AppText>
-                        ) : canRemove ? (
-                          <Pressable hitSlop={8} onPress={() => confirmRemove(m)}>
-                            <AppText variant="label" color="danger">
-                              Remove
-                            </AppText>
-                          </Pressable>
-                        ) : !m.user_id ? (
-                          <AppText variant="label" color="warning">
-                            Invited
-                          </AppText>
-                        ) : null}
-                      </View>
-                    </View>
-                  );
-                })
-              )}
-            </Card>
-          </View>
-
-          <View style={{ gap: Spacing.two }}>
-            <AppText variant="heading">Balances</AppText>
-            {balances.isLoading ? (
-              <View style={{ padding: Spacing.four, alignItems: 'center' }}>
-                <ActivityIndicator color={c.primary} />
-              </View>
-            ) : balances.error ? (
-              <Card>
-                <AppText variant="caption" color="danger">
-                  {(balances.error as Error).message}
-                </AppText>
-              </Card>
-            ) : (
-              <Card style={{ padding: 0, paddingHorizontal: Spacing.four }}>
-                {balances.data!.balances.map((b, i) => (
-                  <View key={b.member.id}>
-                    {i > 0 ? <Divider /> : null}
-                    <View
-                      style={{
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        gap: Spacing.three,
-                        paddingVertical: Spacing.three,
-                      }}
-                    >
-                      <Avatar name={b.member.display_name} size={36} />
-                      <AppText variant="body" style={{ flex: 1, fontWeight: '600' }}>
-                        {b.member.display_name}
-                        {b.member.user_id === user?.id ? '  (you)' : ''}
-                      </AppText>
-                      {b.balanceMinor === 0 ? (
-                        <AppText variant="caption">settled</AppText>
-                      ) : (
-                        <AppText
-                          variant="body"
-                          color={b.balanceMinor > 0 ? 'positive' : 'negative'}
-                          style={{ fontWeight: '700' }}
-                        >
-                          {b.balanceMinor > 0 ? 'gets ' : 'owes '}
-                          {formatMoney(Math.abs(b.balanceMinor), currency)}
-                        </AppText>
-                      )}
-                    </View>
-                  </View>
-                ))}
-              </Card>
-            )}
-
-            {balances.data ? (
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.three }}>
-                <View style={{ flex: 1 }}>
-                  <AppText variant="label">Simplify debts</AppText>
-                  <AppText variant="caption">
-                    {simplify
-                      ? 'Fewest transactions (may route through others)'
-                      : 'Direct debts between each pair'}
-                  </AppText>
-                </View>
-                <Switch
-                  value={simplify}
-                  onValueChange={onToggleSimplify}
-                  trackColor={{ true: c.primary, false: c.border }}
-                />
-              </View>
-            ) : null}
-
-            {balances.data && suggested.length > 0 ? (
-              <Card style={{ gap: Spacing.three }}>
-                <AppText variant="label">Suggested settlements</AppText>
-                {suggested.map((t, i) => (
-                  <View
-                    key={i}
-                    style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.two }}
-                  >
-                    <AppText variant="body" style={{ flex: 1 }}>
-                      {t.from.display_name} → {t.to.display_name}
-                    </AppText>
-                    <AppText variant="body" style={{ fontWeight: '700' }}>
-                      {formatMoney(t.amountMinor, currency)}
-                    </AppText>
-                    <Button
-                      title="Settle"
-                      variant="ghost"
-                      onPress={() =>
-                        router.push(
-                          `/group/${id}/settle?from=${t.from.id}&to=${t.to.id}&amount=${fromMinor(t.amountMinor)}`
-                        )
-                      }
-                    />
-                  </View>
-                ))}
-              </Card>
-            ) : balances.data ? (
-              <Card>
-                <AppText variant="caption" color="success">
-                  Everyone&apos;s settled up.
-                </AppText>
-              </Card>
-            ) : null}
-
-            <Button
-              title="Settle up"
-              variant="secondary"
-              onPress={() => router.push(`/group/${id}/settle`)}
-            />
-          </View>
-
-          <View style={{ gap: Spacing.two }}>
-            <View
-              style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}
-            >
-              <AppText variant="heading">Expenses</AppText>
-              <Button
-                title="Add"
-                variant="ghost"
-                onPress={() => router.push(`/group/${id}/add-expense`)}
-              />
-            </View>
-
-            {expenses.isLoading ? (
-              <View style={{ padding: Spacing.four, alignItems: 'center' }}>
-                <ActivityIndicator color={c.primary} />
-              </View>
-            ) : (expenses.data?.length ?? 0) === 0 ? (
-              <Card>
-                <AppText variant="caption">No expenses yet. Tap Add to record the first one.</AppText>
-              </Card>
-            ) : (
-              <Card style={{ padding: 0, paddingHorizontal: Spacing.four }}>
-                {expenses.data!.map((exp, i) => (
-                  <View key={exp.id}>
-                    {i > 0 ? <Divider /> : null}
-                    <Pressable
-                      onPress={() => router.push(`/group/${id}/expense/${exp.id}`)}
-                      style={({ pressed }) => ({
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        gap: Spacing.three,
-                        paddingVertical: Spacing.three,
-                        opacity: pressed ? 0.6 : 1,
-                      })}
-                    >
-                      <View style={{ flex: 1, gap: 2 }}>
-                        <AppText variant="body" style={{ fontWeight: '600' }}>
-                          {exp.description}
-                        </AppText>
-                        <AppText variant="caption">
-                          {exp.payer?.display_name ?? 'someone'} paid · {exp.spent_at}
-                        </AppText>
-                      </View>
-                      <AppText variant="body" style={{ fontWeight: '700' }}>
-                        {formatMoney(toMinor(exp.amount), group.data?.currency ?? 'INR')}
-                      </AppText>
-                    </Pressable>
-                  </View>
-                ))}
-              </Card>
-            )}
-          </View>
-
-          <View style={{ gap: Spacing.two }}>
-            <AppText variant="heading">Payments</AppText>
-            {settlements.isLoading ? (
-              <View style={{ padding: Spacing.four, alignItems: 'center' }}>
-                <ActivityIndicator color={c.primary} />
-              </View>
-            ) : (settlements.data?.length ?? 0) === 0 ? (
-              <Card>
-                <AppText variant="caption">No payments recorded yet.</AppText>
-              </Card>
-            ) : (
-              <Card style={{ padding: 0, paddingHorizontal: Spacing.four }}>
-                {settlements.data!.map((s, i) => (
-                  <View key={s.id}>
-                    {i > 0 ? <Divider /> : null}
-                    <View
-                      style={{
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        gap: Spacing.three,
-                        paddingVertical: Spacing.three,
-                      }}
-                    >
-                      <View style={{ flex: 1, gap: 2 }}>
-                        <AppText variant="body" style={{ fontWeight: '600' }}>
-                          {s.from?.display_name ?? '?'} → {s.to?.display_name ?? '?'}
-                        </AppText>
-                        <AppText variant="caption">
-                          {s.settled_at}
-                          {s.note ? ` · ${s.note}` : ''}
-                        </AppText>
-                      </View>
-                      <AppText variant="body" style={{ fontWeight: '700' }}>
-                        {formatMoney(toMinor(Number(s.amount)), currency)}
-                      </AppText>
-                      <Pressable hitSlop={8} onPress={() => confirmDeleteSettlement(s)}>
-                        <AppText variant="label" color="danger">
-                          Delete
+                        <AppText variant="body" style={{ fontWeight: '700' }}>
+                          {formatMoney(toMinor(exp.amount), currency)}
                         </AppText>
                       </Pressable>
                     </View>
+                  ))}
+                </Card>
+              )}
+            </View>
+          ) : null}
+
+          {/* ---------- Balances ---------- */}
+          {tab === 'balances' ? (
+            <View style={{ gap: Spacing.four }}>
+              <View style={{ gap: Spacing.two }}>
+                <AppText variant="heading">Balances</AppText>
+                {balances.isLoading ? (
+                  <View style={{ padding: Spacing.four, alignItems: 'center' }}>
+                    <ActivityIndicator color={c.primary} />
                   </View>
-                ))}
-              </Card>
-            )}
-          </View>
+                ) : balances.error ? (
+                  <Card>
+                    <AppText variant="caption" color="danger">
+                      {(balances.error as Error).message}
+                    </AppText>
+                  </Card>
+                ) : (
+                  <Card style={{ padding: 0, paddingHorizontal: Spacing.four }}>
+                    {balances.data!.balances.map((b, i) => (
+                      <View key={b.member.id}>
+                        {i > 0 ? <Divider /> : null}
+                        <View
+                          style={{
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            gap: Spacing.three,
+                            paddingVertical: Spacing.three,
+                          }}
+                        >
+                          <Avatar name={b.member.display_name} size={36} />
+                          <AppText variant="body" style={{ flex: 1, fontWeight: '600' }}>
+                            {b.member.display_name}
+                            {b.member.user_id === user?.id ? '  (you)' : ''}
+                          </AppText>
+                          {b.balanceMinor === 0 ? (
+                            <AppText variant="caption">settled</AppText>
+                          ) : (
+                            <AppText
+                              variant="body"
+                              color={b.balanceMinor > 0 ? 'positive' : 'negative'}
+                              style={{ fontWeight: '700' }}
+                            >
+                              {b.balanceMinor > 0 ? 'gets ' : 'owes '}
+                              {formatMoney(Math.abs(b.balanceMinor), currency)}
+                            </AppText>
+                          )}
+                        </View>
+                      </View>
+                    ))}
+                  </Card>
+                )}
 
-          <Button title="Share summary (PDF)" variant="secondary" onPress={onExportPdf} />
+                {balances.data ? (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.three }}>
+                    <View style={{ flex: 1 }}>
+                      <AppText variant="label">Simplify debts</AppText>
+                      <AppText variant="caption">
+                        {simplify
+                          ? 'Fewest transactions (may route through others)'
+                          : 'Direct debts between each pair'}
+                      </AppText>
+                    </View>
+                    <Switch
+                      value={simplify}
+                      onValueChange={onToggleSimplify}
+                      trackColor={{ true: c.primary, false: c.border }}
+                    />
+                  </View>
+                ) : null}
 
-          <View style={{ marginTop: Spacing.two }}>
-            {isOwner ? (
-              <Button
-                title="Delete group"
-                variant="danger"
-                onPress={confirmDelete}
-                loading={deleteGroup.isPending}
-              />
-            ) : myMembership ? (
-              <Button
-                title="Leave group"
-                variant="secondary"
-                onPress={confirmLeave}
-                loading={leaveGroup.isPending}
-              />
-            ) : null}
-          </View>
+                {balances.data && suggested.length > 0 ? (
+                  <Card style={{ gap: Spacing.three }}>
+                    <AppText variant="label">Suggested settlements</AppText>
+                    {suggested.map((t, i) => (
+                      <View
+                        key={i}
+                        style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.two }}
+                      >
+                        <AppText variant="body" style={{ flex: 1 }}>
+                          {t.from.display_name} → {t.to.display_name}
+                        </AppText>
+                        <AppText variant="body" style={{ fontWeight: '700' }}>
+                          {formatMoney(t.amountMinor, currency)}
+                        </AppText>
+                        <Button
+                          title="Settle"
+                          variant="ghost"
+                          onPress={() =>
+                            router.push(
+                              `/group/${id}/settle?from=${t.from.id}&to=${t.to.id}&amount=${fromMinor(t.amountMinor)}`
+                            )
+                          }
+                        />
+                      </View>
+                    ))}
+                  </Card>
+                ) : balances.data ? (
+                  <Card>
+                    <AppText variant="caption" color="success">
+                      Everyone&apos;s settled up.
+                    </AppText>
+                  </Card>
+                ) : null}
+
+                <Button
+                  title="Settle up"
+                  variant="secondary"
+                  onPress={() => router.push(`/group/${id}/settle`)}
+                />
+              </View>
+
+              <View style={{ gap: Spacing.two }}>
+                <AppText variant="heading">Payments</AppText>
+                {settlements.isLoading ? (
+                  <View style={{ padding: Spacing.four, alignItems: 'center' }}>
+                    <ActivityIndicator color={c.primary} />
+                  </View>
+                ) : (settlements.data?.length ?? 0) === 0 ? (
+                  <Card>
+                    <AppText variant="caption">No payments recorded yet.</AppText>
+                  </Card>
+                ) : (
+                  <Card style={{ padding: 0, paddingHorizontal: Spacing.four }}>
+                    {settlements.data!.map((s, i) => (
+                      <View key={s.id}>
+                        {i > 0 ? <Divider /> : null}
+                        <View
+                          style={{
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            gap: Spacing.three,
+                            paddingVertical: Spacing.three,
+                          }}
+                        >
+                          <View style={{ flex: 1, gap: 2 }}>
+                            <AppText variant="body" style={{ fontWeight: '600' }}>
+                              {s.from?.display_name ?? '?'} → {s.to?.display_name ?? '?'}
+                            </AppText>
+                            <AppText variant="caption">
+                              {s.settled_at}
+                              {s.note ? ` · ${s.note}` : ''}
+                            </AppText>
+                          </View>
+                          <AppText variant="body" style={{ fontWeight: '700' }}>
+                            {formatMoney(toMinor(Number(s.amount)), currency)}
+                          </AppText>
+                          <Pressable hitSlop={8} onPress={() => confirmDeleteSettlement(s)}>
+                            <AppText variant="label" color="danger">
+                              Delete
+                            </AppText>
+                          </Pressable>
+                        </View>
+                      </View>
+                    ))}
+                  </Card>
+                )}
+              </View>
+
+              <Button title="Share summary (PDF)" variant="secondary" onPress={onExportPdf} />
+            </View>
+          ) : null}
+
+          {/* ---------- Members ---------- */}
+          {tab === 'members' ? (
+            <View style={{ gap: Spacing.four }}>
+              <View style={{ gap: Spacing.two }}>
+                <View
+                  style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}
+                >
+                  <AppText variant="heading">Members</AppText>
+                  <Button
+                    title="Add"
+                    variant="ghost"
+                    onPress={() => router.push(`/group/${id}/add-member`)}
+                  />
+                </View>
+
+                <Card style={{ padding: 0, paddingHorizontal: Spacing.four }}>
+                  {members.isLoading ? (
+                    <View style={{ padding: Spacing.four, alignItems: 'center' }}>
+                      <ActivityIndicator color={c.primary} />
+                    </View>
+                  ) : (
+                    (members.data ?? []).map((m, i) => {
+                      const canRemove = isOwner && m.role !== 'owner';
+                      return (
+                        <View key={m.id}>
+                          {i > 0 ? <Divider /> : null}
+                          <View
+                            style={{
+                              flexDirection: 'row',
+                              alignItems: 'center',
+                              gap: Spacing.three,
+                              paddingVertical: Spacing.three,
+                            }}
+                          >
+                            <Avatar name={m.display_name} size={40} />
+                            <View style={{ flex: 1, gap: 2 }}>
+                              <AppText variant="body" style={{ fontWeight: '600' }}>
+                                {m.display_name}
+                                {m.user_id === user?.id ? '  (you)' : ''}
+                              </AppText>
+                              <AppText variant="caption">{memberSubtitle(m)}</AppText>
+                            </View>
+                            {m.role === 'owner' ? (
+                              <AppText variant="label" color="primary">
+                                Owner
+                              </AppText>
+                            ) : canRemove ? (
+                              <Pressable hitSlop={8} onPress={() => confirmRemove(m)}>
+                                <AppText variant="label" color="danger">
+                                  Remove
+                                </AppText>
+                              </Pressable>
+                            ) : !m.user_id ? (
+                              <AppText variant="label" color="warning">
+                                Invited
+                              </AppText>
+                            ) : null}
+                          </View>
+                        </View>
+                      );
+                    })
+                  )}
+                </Card>
+              </View>
+
+              {isOwner ? (
+                <Button
+                  title="Delete group"
+                  variant="danger"
+                  onPress={confirmDelete}
+                  loading={deleteGroup.isPending}
+                />
+              ) : myMembership ? (
+                <Button
+                  title="Leave group"
+                  variant="secondary"
+                  onPress={confirmLeave}
+                  loading={leaveGroup.isPending}
+                />
+              ) : null}
+            </View>
+          ) : null}
         </>
       )}
     </Screen>
