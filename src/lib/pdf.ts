@@ -3,7 +3,7 @@ import * as Sharing from 'expo-sharing';
 import { Platform } from 'react-native';
 
 import { formatMoney } from '@/lib/format';
-import type { MemberBalanceView } from '@/lib/queries/balances';
+import type { MemberBalanceView, TransferView } from '@/lib/queries/balances';
 import type { ExpenseWithPayer } from '@/lib/queries/expenses';
 import type { SettlementView } from '@/lib/queries/settlements';
 import { toMinor } from '@/lib/split';
@@ -21,6 +21,8 @@ export function buildGroupHtml(args: {
   groupName: string;
   currency: string;
   balances: MemberBalanceView[];
+  transfers: TransferView[];
+  simplified: boolean;
   expenses: ExpenseWithPayer[];
   settlements: SettlementView[];
 }): string {
@@ -36,6 +38,16 @@ export function buildGroupHtml(args: {
           : `${b.balanceMinor > 0 ? 'gets ' : 'owes '}${formatMoney(Math.abs(b.balanceMinor), currency)}`;
       return `<tr><td>${esc(b.member.display_name)}</td><td class="amt ${cls}">${label}</td></tr>`;
     })
+    .join('');
+
+  const transferRows = args.transfers
+    .map(
+      (t) =>
+        `<tr><td>${esc(t.from.display_name)} → ${esc(t.to.display_name)}</td><td class="amt">${formatMoney(
+          t.amountMinor,
+          currency
+        )}</td></tr>`
+    )
     .join('');
 
   const expenseRows = args.expenses
@@ -76,6 +88,12 @@ export function buildGroupHtml(args: {
 
   <h2>Balances</h2>
   <table><tbody>${balanceRows || '<tr><td class="muted">No members.</td></tr>'}</tbody></table>
+
+  <h2>Suggested settlements${args.simplified ? ' (simplified)' : ''}</h2>
+  <table>
+    <thead><tr><th>Who pays whom</th><th class="amt">Amount</th></tr></thead>
+    <tbody>${transferRows || '<tr><td class="muted" colspan="2">Everyone is settled up.</td></tr>'}</tbody>
+  </table>
 
   <h2>Expenses (${args.expenses.length})</h2>
   <table>

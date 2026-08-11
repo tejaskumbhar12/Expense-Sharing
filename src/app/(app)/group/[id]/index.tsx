@@ -80,6 +80,18 @@ export default function GroupDetailScreen() {
   const isOwner = !!user && group.data?.created_by === user.id;
   const myMembership = members.data?.find((m) => m.user_id === user?.id);
 
+  // A member can only leave once they're settled up (zero net balance).
+  const myBalanceMinor =
+    balances.data?.balances.find((b) => b.member.id === myMembership?.id)?.balanceMinor ?? 0;
+  const canLeave = !!myMembership && !!balances.data && myBalanceMinor === 0;
+  const leaveBlockedMsg = !balances.data
+    ? 'Checking your balance…'
+    : myBalanceMinor > 0
+      ? `You're owed ${formatMoney(myBalanceMinor, currency)}. Settle up before leaving.`
+      : myBalanceMinor < 0
+        ? `You owe ${formatMoney(-myBalanceMinor, currency)}. Settle up before leaving.`
+        : null;
+
   async function confirmRemove(m: GroupMember) {
     if (await confirm('Remove member', `Remove ${m.display_name} from this group?`, {
       confirmLabel: 'Remove',
@@ -130,6 +142,8 @@ export default function GroupDetailScreen() {
       groupName: group.data?.name ?? 'Group',
       currency,
       balances: balances.data?.balances ?? [],
+      transfers: suggested,
+      simplified: simplify,
       expenses: expenses.data ?? [],
       settlements: settlements.data ?? [],
     });
@@ -476,12 +490,20 @@ export default function GroupDetailScreen() {
                   loading={deleteGroup.isPending}
                 />
               ) : myMembership ? (
-                <Button
-                  title="Leave group"
-                  variant="secondary"
-                  onPress={confirmLeave}
-                  loading={leaveGroup.isPending}
-                />
+                <View style={{ gap: Spacing.two }}>
+                  <Button
+                    title="Leave group"
+                    variant="secondary"
+                    onPress={confirmLeave}
+                    loading={leaveGroup.isPending}
+                    disabled={!canLeave}
+                  />
+                  {!canLeave && leaveBlockedMsg ? (
+                    <AppText variant="caption" color="warning" style={{ textAlign: 'center' }}>
+                      {leaveBlockedMsg}
+                    </AppText>
+                  ) : null}
+                </View>
               ) : null}
             </View>
           ) : null}
