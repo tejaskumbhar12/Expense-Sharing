@@ -28,6 +28,7 @@ export interface ExpenseFormInput {
   split_type: SplitType;
   spent_at: string; // YYYY-MM-DD
   notes?: string | null;
+  receipt_url?: string | null;
   splits: ExpenseSplitInput[];
 }
 
@@ -83,7 +84,15 @@ export function useCreateExpense(groupId: string) {
         p_splits: input.splits,
       });
       if (error) throw error;
-      return data as Expense;
+      const expense = data as Expense;
+      if (input.receipt_url) {
+        const { error: patchError } = await supabase
+          .from('expenses')
+          .update({ receipt_url: input.receipt_url })
+          .eq('id', expense.id);
+        if (patchError) throw patchError;
+      }
+      return expense;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: qk.expenses(groupId) });
@@ -110,7 +119,15 @@ export function useUpdateExpense(groupId: string) {
         p_splits: input.splits,
       });
       if (error) throw error;
-      return data as Expense;
+      const expense = data as Expense;
+      if (input.receipt_url) {
+        const { error: patchError } = await supabase
+          .from('expenses')
+          .update({ receipt_url: input.receipt_url })
+          .eq('id', args.expenseId);
+        if (patchError) throw patchError;
+      }
+      return expense;
     },
     onSuccess: (_data, args) => {
       queryClient.invalidateQueries({ queryKey: qk.expenses(groupId) });

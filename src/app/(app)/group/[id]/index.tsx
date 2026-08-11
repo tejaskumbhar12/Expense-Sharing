@@ -14,6 +14,7 @@ import { useGroupMembers, useLeaveGroup, useRemoveMember } from '@/lib/queries/m
 import { useGroupRealtime } from '@/lib/queries/realtime';
 import { useDeleteSettlement, useSettlements, type SettlementView } from '@/lib/queries/settlements';
 import { formatMoney } from '@/lib/format';
+import { buildGroupHtml, exportGroupPdf } from '@/lib/pdf';
 import { fromMinor, toMinor } from '@/lib/split';
 import type { GroupMember } from '@/types/models';
 
@@ -108,6 +109,21 @@ export default function GroupDetailScreen() {
       )
     ) {
       deleteSettlement.mutate(s.id);
+    }
+  }
+
+  async function onExportPdf() {
+    const html = buildGroupHtml({
+      groupName: group.data?.name ?? 'Group',
+      currency,
+      balances: balances.data?.balances ?? [],
+      expenses: expenses.data ?? [],
+      settlements: settlements.data ?? [],
+    });
+    try {
+      await exportGroupPdf(html);
+    } catch (e) {
+      console.warn('PDF export failed', e);
     }
   }
 
@@ -415,6 +431,8 @@ export default function GroupDetailScreen() {
               </Card>
             )}
           </View>
+
+          <Button title="Share summary (PDF)" variant="secondary" onPress={onExportPdf} />
 
           <View style={{ marginTop: Spacing.two }}>
             {isOwner ? (

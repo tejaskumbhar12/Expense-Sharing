@@ -1,6 +1,6 @@
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Platform, Pressable, ScrollView, View } from 'react-native';
+import { ActivityIndicator, Image, Platform, Pressable, ScrollView, View } from 'react-native';
 
 import { SplitEditor, toSplitInputs, type SplitResult } from '@/components/SplitEditor';
 import { AppText, Avatar, Button, Screen, TextField } from '@/components/ui';
@@ -15,6 +15,7 @@ import {
 } from '@/lib/queries/expenses';
 import { useGroup } from '@/lib/queries/groups';
 import { useGroupMembers } from '@/lib/queries/members';
+import { pickReceipt, uploadReceipt, type PickedImage } from '@/lib/receipts';
 import { fromMinor, toMinor } from '@/lib/split';
 
 const num = (s: string) => {
@@ -46,6 +47,8 @@ export default function AddExpenseScreen() {
   const [split, setSplit] = useState<SplitResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [receipt, setReceipt] = useState<PickedImage | null>(null);
+  const [existingReceiptUrl, setExistingReceiptUrl] = useState<string | null>(null);
 
   // Default the payer to the current user's membership once members load.
   useEffect(() => {
@@ -63,6 +66,7 @@ export default function AddExpenseScreen() {
     setPayer(e.paid_by);
     setSpentAt(e.spent_at);
     setNotes(e.notes ?? '');
+    setExistingReceiptUrl(e.receipt_url ?? null);
   }, [isEdit, existing.data]);
 
   const totalMinor = toMinor(num(amount));
@@ -90,6 +94,16 @@ export default function AddExpenseScreen() {
     };
   }, [isEdit, existing.data]);
 
+  async function onPickReceipt() {
+    setError(null);
+    try {
+      const picked = await pickReceipt();
+      if (picked) setReceipt(picked);
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  }
+
   async function onSubmit() {
     setError(null);
     if (!description.trim()) return setError('Enter a description.');
@@ -99,6 +113,7 @@ export default function AddExpenseScreen() {
 
     setBusy(true);
     try {
+      const receiptUrl = receipt ? await uploadReceipt(id, receipt.base64) : undefined;
       const input: ExpenseFormInput = {
         description: description.trim(),
         amount: fromMinor(totalMinor),
@@ -107,6 +122,7 @@ export default function AddExpenseScreen() {
         split_type: split.splitType,
         spent_at: spentAt,
         notes: notes.trim() || null,
+        receipt_url: receiptUrl,
         splits: toSplitInputs(split),
       };
       if (isEdit && expenseId) await update.mutateAsync({ expenseId, input });
@@ -186,6 +202,27 @@ export default function AddExpenseScreen() {
             onChangeText={setNotes}
             placeholder="Anything to remember"
           />
+
+          <View style={{ gap: Spacing.two }}>
+            <AppText variant="label">Receipt (optional)</AppText>
+            {receipt?.uri || existingReceiptUrl ? (
+              <Image
+                source={{ uri: receipt?.uri ?? existingReceiptUrl! }}
+                style={{ width: '100%', height: 180, borderRadius: 12, backgroundColor: c.backgroundElement }}
+                resizeMode="cover"
+              />
+            ) : null}
+            <View style={{ flexDirection: 'row', gap: Spacing.two }}>
+              <Button
+                title={receipt || existingReceiptUrl ? 'Change receipt' : 'Add receipt'}
+                variant="secondary"
+                onPress={onPickReceipt}
+              />
+              {receipt ? (
+                <Button title="Remove" variant="ghost" onPress={() => setReceipt(null)} />
+              ) : null}
+            </View>
+          </View>
 
           <View style={{ gap: Spacing.two }}>
             <AppText variant="heading">Split</AppText>

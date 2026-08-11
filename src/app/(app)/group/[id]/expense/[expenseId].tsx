@@ -1,5 +1,5 @@
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { ActivityIndicator, Pressable, View } from 'react-native';
+import { ActivityIndicator, Image, Pressable, View } from 'react-native';
 
 import { AppText, Avatar, Button, Card, Divider, EmptyState, Screen } from '@/components/ui';
 import { Spacing } from '@/constants/theme';
@@ -86,6 +86,17 @@ export default function ExpenseDetailScreen() {
               ))}
             </Card>
           </View>
+
+          {e.receipt_url ? (
+            <View style={{ gap: Spacing.two }}>
+              <AppText variant="heading">Receipt</AppText>
+              <Image
+                source={{ uri: e.receipt_url }}
+                style={{ width: '100%', height: 240, borderRadius: 12, backgroundColor: c.backgroundElement }}
+                resizeMode="cover"
+              />
+            </View>
+          ) : null}
 
           <View style={{ gap: Spacing.three }}>
             <Button

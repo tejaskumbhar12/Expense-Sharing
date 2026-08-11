@@ -47,6 +47,7 @@ export interface Expense {
   spent_at: string;
   created_by: string;
   notes: string | null;
+  receipt_url: string | null;
   created_at: string;
 }
 

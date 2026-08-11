@@ -42,8 +42,15 @@ Node **≥20.19.4** required by Expo 57.
 
 ## Status
 
-M0-M5 done — full POC. Auth, groups/members, expenses/splits, balances + debt-simplify +
-settlements, and polish (Realtime, persisted simplify toggle, activity feed, pull-to-refresh).
+M0-M6 done — full POC. Auth, groups/members, expenses/splits, balances + debt-simplify +
+settlements, polish (Realtime, persisted simplify toggle, activity feed, pull-to-refresh), and
+receipts + CSV export.
+
+- M6: `src/lib/receipts.ts` (expo-image-picker + upload to the public `receipts` Storage bucket;
+  path `<group_id>/<ts>.jpg`, membership-gated by 0006); expense hooks patch `receipt_url` after the
+  RPC. `src/lib/pdf.ts` renders a group summary (balances + expenses + payments) to PDF via
+  expo-print + expo-sharing (native) / print-save (web). Migration 0006 adds the column +
+  bucket/policies.
 
 - M5: `src/lib/queries/realtime.ts` subscribes to Realtime and invalidates React Query;
   `groups.simplify_debts` (migration 0005) persists the toggle via `useUpdateGroupSettings`;
