@@ -1,16 +1,19 @@
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { ActivityIndicator, Pressable, View } from 'react-native';
+import { useState } from 'react';
+import { ActivityIndicator, Pressable, Switch, View } from 'react-native';
 
 import { AppText, Avatar, Button, Card, Divider, EmptyState, Screen } from '@/components/ui';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useAuth } from '@/lib/auth';
 import { confirm } from '@/lib/confirm';
+import { useGroupBalances } from '@/lib/queries/balances';
 import { useExpenses } from '@/lib/queries/expenses';
 import { useDeleteGroup, useGroup } from '@/lib/queries/groups';
 import { useGroupMembers, useLeaveGroup, useRemoveMember } from '@/lib/queries/members';
+import { useDeleteSettlement, useSettlements, type SettlementView } from '@/lib/queries/settlements';
 import { formatMoney } from '@/lib/format';
-import { toMinor } from '@/lib/split';
+import { fromMinor, toMinor } from '@/lib/split';
 import type { GroupMember } from '@/types/models';
 
 export default function GroupDetailScreen() {
@@ -24,6 +27,16 @@ export default function GroupDetailScreen() {
   const deleteGroup = useDeleteGroup();
   const leaveGroup = useLeaveGroup(id);
   const expenses = useExpenses(id);
+  const balances = useGroupBalances(id);
+  const settlements = useSettlements(id);
+  const deleteSettlement = useDeleteSettlement(id);
+  const currency = group.data?.currency ?? 'INR';
+  const [simplify, setSimplify] = useState(true);
+  const suggested = balances.data
+    ? simplify
+      ? balances.data.transfers
+      : balances.data.directTransfers
+    : [];
 
   const isOwner = !!user && group.data?.created_by === user.id;
   const myMembership = members.data?.find((m) => m.user_id === user?.id);
@@ -59,6 +72,18 @@ export default function GroupDetailScreen() {
   function memberSubtitle(m: GroupMember): string {
     if (!m.user_id) return m.email || m.phone || 'Invited (not yet joined)';
     return m.email || m.phone || 'Member';
+  }
+
+  async function confirmDeleteSettlement(s: SettlementView) {
+    if (
+      await confirm(
+        'Delete payment',
+        `Delete this ${formatMoney(toMinor(Number(s.amount)), currency)} payment?`,
+        { confirmLabel: 'Delete', destructive: true }
+      )
+    ) {
+      deleteSettlement.mutate(s.id);
+    }
   }
 
   return (
@@ -154,6 +179,113 @@ export default function GroupDetailScreen() {
           </View>
 
           <View style={{ gap: Spacing.two }}>
+            <AppText variant="heading">Balances</AppText>
+            {balances.isLoading ? (
+              <View style={{ padding: Spacing.four, alignItems: 'center' }}>
+                <ActivityIndicator color={c.primary} />
+              </View>
+            ) : balances.error ? (
+              <Card>
+                <AppText variant="caption" color="danger">
+                  {(balances.error as Error).message}
+                </AppText>
+              </Card>
+            ) : (
+              <Card style={{ padding: 0, paddingHorizontal: Spacing.four }}>
+                {balances.data!.balances.map((b, i) => (
+                  <View key={b.member.id}>
+                    {i > 0 ? <Divider /> : null}
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: Spacing.three,
+                        paddingVertical: Spacing.three,
+                      }}
+                    >
+                      <Avatar name={b.member.display_name} size={36} />
+                      <AppText variant="body" style={{ flex: 1, fontWeight: '600' }}>
+                        {b.member.display_name}
+                        {b.member.user_id === user?.id ? '  (you)' : ''}
+                      </AppText>
+                      {b.balanceMinor === 0 ? (
+                        <AppText variant="caption">settled</AppText>
+                      ) : (
+                        <AppText
+                          variant="body"
+                          color={b.balanceMinor > 0 ? 'positive' : 'negative'}
+                          style={{ fontWeight: '700' }}
+                        >
+                          {b.balanceMinor > 0 ? 'gets ' : 'owes '}
+                          {formatMoney(Math.abs(b.balanceMinor), currency)}
+                        </AppText>
+                      )}
+                    </View>
+                  </View>
+                ))}
+              </Card>
+            )}
+
+            {balances.data ? (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.three }}>
+                <View style={{ flex: 1 }}>
+                  <AppText variant="label">Simplify debts</AppText>
+                  <AppText variant="caption">
+                    {simplify
+                      ? 'Fewest transactions (may route through others)'
+                      : 'Direct debts between each pair'}
+                  </AppText>
+                </View>
+                <Switch
+                  value={simplify}
+                  onValueChange={setSimplify}
+                  trackColor={{ true: c.primary, false: c.border }}
+                />
+              </View>
+            ) : null}
+
+            {balances.data && suggested.length > 0 ? (
+              <Card style={{ gap: Spacing.three }}>
+                <AppText variant="label">Suggested settlements</AppText>
+                {suggested.map((t, i) => (
+                  <View
+                    key={i}
+                    style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.two }}
+                  >
+                    <AppText variant="body" style={{ flex: 1 }}>
+                      {t.from.display_name} → {t.to.display_name}
+                    </AppText>
+                    <AppText variant="body" style={{ fontWeight: '700' }}>
+                      {formatMoney(t.amountMinor, currency)}
+                    </AppText>
+                    <Button
+                      title="Settle"
+                      variant="ghost"
+                      onPress={() =>
+                        router.push(
+                          `/group/${id}/settle?from=${t.from.id}&to=${t.to.id}&amount=${fromMinor(t.amountMinor)}`
+                        )
+                      }
+                    />
+                  </View>
+                ))}
+              </Card>
+            ) : balances.data ? (
+              <Card>
+                <AppText variant="caption" color="success">
+                  Everyone&apos;s settled up.
+                </AppText>
+              </Card>
+            ) : null}
+
+            <Button
+              title="Settle up"
+              variant="secondary"
+              onPress={() => router.push(`/group/${id}/settle`)}
+            />
+          </View>
+
+          <View style={{ gap: Spacing.two }}>
             <View
               style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}
             >
@@ -200,6 +332,53 @@ export default function GroupDetailScreen() {
                         {formatMoney(toMinor(exp.amount), group.data?.currency ?? 'INR')}
                       </AppText>
                     </Pressable>
+                  </View>
+                ))}
+              </Card>
+            )}
+          </View>
+
+          <View style={{ gap: Spacing.two }}>
+            <AppText variant="heading">Payments</AppText>
+            {settlements.isLoading ? (
+              <View style={{ padding: Spacing.four, alignItems: 'center' }}>
+                <ActivityIndicator color={c.primary} />
+              </View>
+            ) : (settlements.data?.length ?? 0) === 0 ? (
+              <Card>
+                <AppText variant="caption">No payments recorded yet.</AppText>
+              </Card>
+            ) : (
+              <Card style={{ padding: 0, paddingHorizontal: Spacing.four }}>
+                {settlements.data!.map((s, i) => (
+                  <View key={s.id}>
+                    {i > 0 ? <Divider /> : null}
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: Spacing.three,
+                        paddingVertical: Spacing.three,
+                      }}
+                    >
+                      <View style={{ flex: 1, gap: 2 }}>
+                        <AppText variant="body" style={{ fontWeight: '600' }}>
+                          {s.from?.display_name ?? '?'} → {s.to?.display_name ?? '?'}
+                        </AppText>
+                        <AppText variant="caption">
+                          {s.settled_at}
+                          {s.note ? ` · ${s.note}` : ''}
+                        </AppText>
+                      </View>
+                      <AppText variant="body" style={{ fontWeight: '700' }}>
+                        {formatMoney(toMinor(Number(s.amount)), currency)}
+                      </AppText>
+                      <Pressable hitSlop={8} onPress={() => confirmDeleteSettlement(s)}>
+                        <AppText variant="label" color="danger">
+                          Delete
+                        </AppText>
+                      </Pressable>
+                    </View>
                   </View>
                 ))}
               </Card>

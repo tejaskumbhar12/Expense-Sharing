@@ -42,7 +42,14 @@ Node **≥20.19.4** required by Expo 57.
 
 ## Status
 
-M0-M2 done, M3 (expenses & splits) done. Next: **M4 balances, debt simplification, settlements**.
+M0-M4 done (auth, groups/members, expenses/splits, balances + debt-simplify + settlements).
+Next: **M5 polish** (activity feed, Realtime live updates, multi-currency, avatars).
+
+- Balances derived client-side in `src/lib/queries/balances.ts` via `computeBalances` +
+  `simplifyDebts` (`src/lib/debt.ts`); settlements via `src/lib/queries/settlements.ts`. Group
+  detail shows per-member net, suggested transfers (quick-settle), and a payments list; settle-up
+  screen at `group/[id]/settle.tsx` (prefilled from a suggested transfer). No new migration —
+  settlements table + RLS shipped in 0001.
 
 - SQL RPCs live in `supabase/migrations/` (run in dashboard, in order): `create_group` +
   `find_user_by_email` (0002), member-delete policy (0003), `create_expense` + `update_expense`

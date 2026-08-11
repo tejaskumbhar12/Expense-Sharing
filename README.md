@@ -87,5 +87,5 @@ supabase/migrations/   # SQL schema + RLS + trigger
 - ✅ **M1** Email/password auth
 - ✅ **M2** Groups & members (create, add by email / manual / device contacts)
 - ✅ **M3** Expenses & splits (equal / exact / percent / shares; add / edit / delete)
-- ⬜ **M4** Balances, debt simplification, settlements
+- ✅ **M4** Balances, debt simplification (min cash flow), settlements / settle-up
 - ⬜ **M5** Polish (activity feed, realtime, multi-currency)

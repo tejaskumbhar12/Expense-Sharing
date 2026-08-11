@@ -84,6 +84,45 @@ export function simplifyDebts(balances: MemberBalance[]): Transfer[] {
   return transfers;
 }
 
+export interface PairwiseInput {
+  expenses: { paidBy: string; splits: { memberId: string; amountOwedMinor: number }[] }[];
+  settlements: { fromMember: string; toMember: string; amountMinor: number }[];
+}
+
+/**
+ * Direct (unsimplified) debts: who owes whom based on the actual expenses,
+ * netted per pair only — never routed through a third person. This is the
+ * "Simplify debts OFF" view. Contrast with `simplifyDebts`, which nets across
+ * the whole group to minimise the number of transfers.
+ */
+export function pairwiseDebts(input: PairwiseInput): Transfer[] {
+  const owe = new Map<string, number>(); // key `${from}|${to}` => amount `from` owes `to`
+  const add = (from: string, to: string, amt: number) => {
+    if (from === to || amt === 0) return;
+    const k = `${from}|${to}`;
+    owe.set(k, (owe.get(k) ?? 0) + amt);
+  };
+
+  for (const e of input.expenses) {
+    for (const s of e.splits) add(s.memberId, e.paidBy, s.amountOwedMinor);
+  }
+  // Paying someone reduces what you owe them (or makes them owe you).
+  for (const st of input.settlements) add(st.fromMember, st.toMember, -st.amountMinor);
+
+  const transfers: Transfer[] = [];
+  const seen = new Set<string>();
+  for (const key of owe.keys()) {
+    const [a, b] = key.split('|');
+    const pairId = [a, b].sort().join('|');
+    if (seen.has(pairId)) continue;
+    seen.add(pairId);
+    const net = (owe.get(`${a}|${b}`) ?? 0) - (owe.get(`${b}|${a}`) ?? 0);
+    if (net > 0) transfers.push({ from: a, to: b, amountMinor: net });
+    else if (net < 0) transfers.push({ from: b, to: a, amountMinor: -net });
+  }
+  return transfers;
+}
+
 function maxIndex(arr: { amt: number }[]): number {
   let idx = 0;
   for (let i = 1; i < arr.length; i++) {

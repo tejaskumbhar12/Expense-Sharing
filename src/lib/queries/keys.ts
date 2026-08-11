@@ -5,4 +5,6 @@ export const qk = {
   members: (groupId: string) => ['groups', groupId, 'members'] as const,
   expenses: (groupId: string) => ['groups', groupId, 'expenses'] as const,
   expense: (expenseId: string) => ['expenses', expenseId] as const,
+  balances: (groupId: string) => ['groups', groupId, 'balances'] as const,
+  settlements: (groupId: string) => ['groups', groupId, 'settlements'] as const,
 };

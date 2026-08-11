@@ -1,6 +1,6 @@
 import { describe, expect, it } from '@jest/globals';
 
-import { computeBalances, simplifyDebts, type MemberBalance } from '@/lib/debt';
+import { computeBalances, pairwiseDebts, simplifyDebts, type MemberBalance } from '@/lib/debt';
 
 describe('computeBalances', () => {
   it('nets paid vs owed for a simple equal split', () => {
@@ -96,5 +96,48 @@ describe('simplifyDebts', () => {
 
   it('returns nothing when everyone is settled', () => {
     expect(simplifyDebts([{ memberId: 'A', balanceMinor: 0 }])).toEqual([]);
+  });
+});
+
+describe('pairwiseDebts', () => {
+  // B paid 10 for A; C paid 10 for B. Chain A -> B -> C.
+  const expenses = [
+    { paidBy: 'B', splits: [{ memberId: 'A', amountOwedMinor: 1000 }] },
+    { paidBy: 'C', splits: [{ memberId: 'B', amountOwedMinor: 1000 }] },
+  ];
+
+  it('keeps debts direct, without routing through a third person', () => {
+    const t = pairwiseDebts({ expenses, settlements: [] });
+    expect(t.length).toBe(2);
+    expect(t).toEqual(
+      expect.arrayContaining([
+        { from: 'A', to: 'B', amountMinor: 1000 },
+        { from: 'B', to: 'C', amountMinor: 1000 },
+      ])
+    );
+    // whereas simplifyDebts collapses the chain into a single A -> C transfer
+    const simplified = simplifyDebts(
+      computeBalances({
+        memberIds: ['A', 'B', 'C'],
+        expenses: [
+          { paidBy: 'B', amountMinor: 1000 },
+          { paidBy: 'C', amountMinor: 1000 },
+        ],
+        splits: [
+          { memberId: 'A', amountOwedMinor: 1000 },
+          { memberId: 'B', amountOwedMinor: 1000 },
+        ],
+        settlements: [],
+      })
+    );
+    expect(simplified).toEqual([{ from: 'A', to: 'C', amountMinor: 1000 }]);
+  });
+
+  it('nets a settlement against the pair it was paid to', () => {
+    const t = pairwiseDebts({
+      expenses,
+      settlements: [{ fromMember: 'A', toMember: 'B', amountMinor: 1000 }],
+    });
+    expect(t).toEqual([{ from: 'B', to: 'C', amountMinor: 1000 }]);
   });
 });
