@@ -68,7 +68,7 @@ export function buildGroupHtml(args: {
     )
     .join('');
 
-  return `<!doctype html><html><head><meta charset="utf-8" />
+  return `<!doctype html><html><head><meta charset="utf-8" /><title>${esc(args.groupName)} — SplitKaroo</title>
 <style>
   * { box-sizing: border-box; }
   body { font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: #14181f; padding: 28px; font-size: 13px; }
