@@ -6,8 +6,11 @@ import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useAuth } from '@/lib/auth';
 import { confirm } from '@/lib/confirm';
+import { useExpenses } from '@/lib/queries/expenses';
 import { useDeleteGroup, useGroup } from '@/lib/queries/groups';
 import { useGroupMembers, useLeaveGroup, useRemoveMember } from '@/lib/queries/members';
+import { formatMoney } from '@/lib/format';
+import { toMinor } from '@/lib/split';
 import type { GroupMember } from '@/types/models';
 
 export default function GroupDetailScreen() {
@@ -20,6 +23,7 @@ export default function GroupDetailScreen() {
   const removeMember = useRemoveMember(id);
   const deleteGroup = useDeleteGroup();
   const leaveGroup = useLeaveGroup(id);
+  const expenses = useExpenses(id);
 
   const isOwner = !!user && group.data?.created_by === user.id;
   const myMembership = members.data?.find((m) => m.user_id === user?.id);
@@ -150,13 +154,56 @@ export default function GroupDetailScreen() {
           </View>
 
           <View style={{ gap: Spacing.two }}>
-            <AppText variant="heading">Expenses</AppText>
-            <Card>
-              <AppText variant="caption">
-                Adding and splitting expenses arrives next (M3), followed by balances and settle-up
-                (M4).
-              </AppText>
-            </Card>
+            <View
+              style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}
+            >
+              <AppText variant="heading">Expenses</AppText>
+              <Button
+                title="Add"
+                variant="ghost"
+                onPress={() => router.push(`/group/${id}/add-expense`)}
+              />
+            </View>
+
+            {expenses.isLoading ? (
+              <View style={{ padding: Spacing.four, alignItems: 'center' }}>
+                <ActivityIndicator color={c.primary} />
+              </View>
+            ) : (expenses.data?.length ?? 0) === 0 ? (
+              <Card>
+                <AppText variant="caption">No expenses yet. Tap Add to record the first one.</AppText>
+              </Card>
+            ) : (
+              <Card style={{ padding: 0, paddingHorizontal: Spacing.four }}>
+                {expenses.data!.map((exp, i) => (
+                  <View key={exp.id}>
+                    {i > 0 ? <Divider /> : null}
+                    <Pressable
+                      onPress={() => router.push(`/group/${id}/expense/${exp.id}`)}
+                      style={({ pressed }) => ({
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: Spacing.three,
+                        paddingVertical: Spacing.three,
+                        opacity: pressed ? 0.6 : 1,
+                      })}
+                    >
+                      <View style={{ flex: 1, gap: 2 }}>
+                        <AppText variant="body" style={{ fontWeight: '600' }}>
+                          {exp.description}
+                        </AppText>
+                        <AppText variant="caption">
+                          {exp.payer?.display_name ?? 'someone'} paid · {exp.spent_at}
+                        </AppText>
+                      </View>
+                      <AppText variant="body" style={{ fontWeight: '700' }}>
+                        {formatMoney(toMinor(exp.amount), group.data?.currency ?? 'INR')}
+                      </AppText>
+                    </Pressable>
+                  </View>
+                ))}
+              </Card>
+            )}
           </View>
 
           <View style={{ marginTop: Spacing.two }}>

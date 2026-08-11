@@ -42,11 +42,15 @@ Node **≥20.19.4** required by Expo 57.
 
 ## Status
 
-M0 (scaffold/config/schema), M1 (auth), M2 (groups & members) done. Next: **M3 expenses & splits**.
+M0-M2 done, M3 (expenses & splits) done. Next: **M4 balances, debt simplification, settlements**.
 
-- M2 adds `create_group` + `find_user_by_email` RPCs in `supabase/migrations/0002_groups_rpc.sql`
-  (must be run in the dashboard). App uses a `(tabs)` layout (Groups / Account); group create,
-  detail, and add-member (email lookup / manual / `expo-contacts`) live under `src/app/(app)/`.
+- SQL RPCs live in `supabase/migrations/` (run in dashboard, in order): `create_group` +
+  `find_user_by_email` (0002), member-delete policy (0003), `create_expense` + `update_expense`
+  (0004, atomic expense+splits, validates sum == amount).
+- App uses a `(tabs)` layout (Groups / Account). Group create/detail/add-member and expense
+  add-edit/detail live under `src/app/(app)/group/[id]/`.
+- `src/components/SplitEditor.tsx` drives all 4 split types via `src/lib/split.ts` (minor units).
 - Data access via React Query hooks in `src/lib/queries/`.
-- For a dev/prod build (not Expo Go), add the `expo-contacts` config plugin to `app.json` for the
-  contacts permission prompt.
+- Web quirks handled: RN `Alert` is a no-op on web → use `src/lib/confirm.ts`; web modals/detail get
+  inline Cancel/Back controls (native uses the header).
+- For a dev/prod build (not Expo Go), add the `expo-contacts` config plugin to `app.json`.
