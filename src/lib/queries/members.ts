@@ -60,6 +60,7 @@ export function useAddMember(groupId: string) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: qk.members(groupId) });
       queryClient.invalidateQueries({ queryKey: qk.groups });
+      queryClient.invalidateQueries({ queryKey: ['known-people'] });
     },
   });
 }
@@ -74,6 +75,7 @@ export function useRemoveMember(groupId: string) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: qk.members(groupId) });
       queryClient.invalidateQueries({ queryKey: qk.groups });
+      queryClient.invalidateQueries({ queryKey: ['known-people'] });
     },
   });
 }
@@ -93,6 +95,7 @@ export function useLeaveGroup(groupId: string) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: qk.members(groupId) });
       queryClient.invalidateQueries({ queryKey: qk.groups });
+      queryClient.invalidateQueries({ queryKey: ['known-people'] });
     },
   });
 }

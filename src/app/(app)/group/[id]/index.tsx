@@ -81,6 +81,13 @@ export default function GroupDetailScreen() {
   const isOwner = !!user && group.data?.created_by === user.id;
   const myMembership = members.data?.find((m) => m.user_id === user?.id);
 
+  const [removeError, setRemoveError] = useState<string | null>(null);
+  // null while balances are still loading (so Remove doesn't flash before we know).
+  const balanceOf = (memberId: string): number | null =>
+    balances.data
+      ? balances.data.balances.find((b) => b.member.id === memberId)?.balanceMinor ?? 0
+      : null;
+
   // A member can only leave once they're settled up (zero net balance).
   const myBalanceMinor =
     balances.data?.balances.find((b) => b.member.id === myMembership?.id)?.balanceMinor ?? 0;
@@ -94,11 +101,17 @@ export default function GroupDetailScreen() {
         : null;
 
   async function confirmRemove(m: GroupMember) {
+    setRemoveError(null);
     if (await confirm('Remove member', `Remove ${m.display_name} from this group?`, {
       confirmLabel: 'Remove',
       destructive: true,
     })) {
-      removeMember.mutate(m.id);
+      removeMember.mutate(m.id, {
+        onError: (e) =>
+          setRemoveError(
+            `Couldn't remove ${m.display_name}: ${(e as Error).message}. They may have expenses in this group.`
+          ),
+      });
     }
   }
 
@@ -440,7 +453,7 @@ export default function GroupDetailScreen() {
                     </View>
                   ) : (
                     (members.data ?? []).map((m, i) => {
-                      const canRemove = isOwner && m.role !== 'owner';
+                      const bal = balanceOf(m.id);
                       return (
                         <View key={m.id}>
                           {i > 0 ? <Divider /> : null}
@@ -464,23 +477,32 @@ export default function GroupDetailScreen() {
                               <AppText variant="label" color="primary">
                                 Owner
                               </AppText>
-                            ) : canRemove ? (
+                            ) : m.user_id === user?.id ? null : bal == null ? null : bal !== 0 ? (
+                              <AppText variant="label" color="warning">
+                                {bal > 0 ? 'gets ' : 'owes '}
+                                {formatMoney(Math.abs(bal), currency)}
+                              </AppText>
+                            ) : (
                               <Pressable hitSlop={8} onPress={() => confirmRemove(m)}>
                                 <AppText variant="label" color="danger">
                                   Remove
                                 </AppText>
                               </Pressable>
-                            ) : !m.user_id ? (
-                              <AppText variant="label" color="warning">
-                                Invited
-                              </AppText>
-                            ) : null}
+                            )}
                           </View>
                         </View>
                       );
                     })
                   )}
                 </Card>
+                {removeError ? (
+                  <AppText variant="caption" color="danger">
+                    {removeError}
+                  </AppText>
+                ) : null}
+                <AppText variant="caption">
+                  Anyone can remove a member who is settled up (owes and is owed nothing).
+                </AppText>
               </View>
 
               {isOwner ? (
