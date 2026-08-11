@@ -51,6 +51,9 @@ receipts + CSV export.
   RPC. `src/lib/pdf.ts` renders a group summary (balances + expenses + payments) to PDF via
   expo-print + expo-sharing (native) / print-save (web). Migration 0006 adds the column +
   bucket/policies.
+- Member names: `group_members.display_name` starts as placeholder text (e.g. added-by-email).
+  Migration 0007 keeps it synced to the linked user's `profiles.full_name` (backfill + trigger on
+  profiles + updated `handle_new_user`), so real names show everywhere once a person signs up.
 
 - M5: `src/lib/queries/realtime.ts` subscribes to Realtime and invalidates React Query;
   `groups.simplify_debts` (migration 0005) persists the toggle via `useUpdateGroupSettings`;

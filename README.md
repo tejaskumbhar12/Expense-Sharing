@@ -39,6 +39,7 @@ A mobile app to create groups, add people, split expenses, simplify debts, and s
    - [`0004_expenses_rpc.sql`](supabase/migrations/0004_expenses_rpc.sql) — `create_expense` + `update_expense` RPCs (M3)
    - [`0005_polish.sql`](supabase/migrations/0005_polish.sql) — `groups.simplify_debts` column + Realtime publication (M5)
    - [`0006_receipts.sql`](supabase/migrations/0006_receipts.sql) — `expenses.receipt_url` + `receipts` Storage bucket & policies (M6)
+   - [`0007_sync_member_names.sql`](supabase/migrations/0007_sync_member_names.sql) — sync `group_members.display_name` to the linked profile's name
 
 5. *(Optional, speeds up testing)* Dashboard → **Authentication → Providers → Email**: turn **off**
    "Confirm email" so sign-up logs you straight in without an email round-trip.
