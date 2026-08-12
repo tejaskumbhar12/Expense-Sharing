@@ -1,0 +1,34 @@
+name: Supabase keepalive
+
+# Hits the Supabase REST API on a schedule so the free project doesn't pause
+# after ~7 days of inactivity. Runs Mon & Thu (well under the 7-day window),
+# and can be triggered manually from the Actions tab.
+
+on:
+  schedule:
+    - cron: '0 6 * * 1,4' # 06:00 UTC, Mondays and Thursdays
+  workflow_dispatch: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Supabase REST
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_ANON_KEY" ]; then
+            echo "Missing SUPABASE_URL / SUPABASE_ANON_KEY repo secrets."
+            exit 1
+          fi
+          code=$(curl -sS -o /dev/null -w "%{http_code}" \
+            "${SUPABASE_URL%/}/rest/v1/groups?select=id&limit=1" \
+            -H "apikey: ${SUPABASE_ANON_KEY}" \
+            -H "Authorization: Bearer ${SUPABASE_ANON_KEY}")
+          echo "Supabase responded HTTP $code"
+          # Any non-5xx means the request reached the DB (activity registered).
+          if [ "$code" -ge 500 ]; then
+            echo "Supabase server error — treating as failure."
+            exit 1
+          fi
