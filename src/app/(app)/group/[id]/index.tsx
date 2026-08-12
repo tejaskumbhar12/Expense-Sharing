@@ -136,7 +136,10 @@ export default function GroupDetailScreen() {
   }
 
   function memberSubtitle(m: GroupMember): string {
-    if (!m.user_id) return m.email || m.phone || 'Invited (not yet joined)';
+    if (!m.user_id) {
+      const contact = m.email || m.phone;
+      return contact ? `${contact} · not joined yet` : 'Not joined yet — share the app link';
+    }
     return m.email || m.phone || 'Member';
   }
 

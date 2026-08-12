@@ -217,8 +217,8 @@ export default function AddMemberScreen() {
             autoFocus
           />
           <AppText variant="caption">
-            If they already have an account we link it. Otherwise they're added as an invite and
-            linked automatically when they sign up with this email.
+            If they already have an account we link it. No email is sent — share the app link; they
+            are linked automatically when they sign up with this email.
           </AppText>
           {error ? (
             <AppText variant="caption" color="danger">
