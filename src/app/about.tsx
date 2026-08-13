@@ -1,5 +1,5 @@
 import Constants from 'expo-constants';
-import { Stack, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { Linking, Platform, Pressable, View } from 'react-native';
 
 import { AppText, Card, Screen } from '@/components/ui';
@@ -15,13 +15,13 @@ export default function AboutScreen() {
 
   return (
     <Screen scroll contentStyle={{ gap: Spacing.four }}>
-      <Stack.Screen options={{ title: 'About' }} />
-
-      {!router.canGoBack() ? (
-        <Pressable onPress={() => router.replace('/')} hitSlop={8} style={{ alignSelf: 'flex-start' }}>
-          <AppText style={{ color: c.primary, fontSize: 16, fontWeight: '600' }}>‹ Back</AppText>
-        </Pressable>
-      ) : null}
+      <Pressable
+        onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))}
+        hitSlop={8}
+        style={{ alignSelf: 'flex-start' }}
+      >
+        <AppText style={{ color: c.primary, fontSize: 16, fontWeight: '600' }}>‹ Back</AppText>
+      </Pressable>
 
       <View style={{ alignItems: 'center', gap: 2, paddingVertical: Spacing.three }}>
         <AppText variant="title">SplitKaroo</AppText>
@@ -51,11 +51,14 @@ export default function AboutScreen() {
       <Card style={{ gap: Spacing.two }}>
         <AppText variant="heading">Disclaimer</AppText>
         <AppText variant="caption">
-          SplitKaroo is a personal, non-commercial project provided “as is”, without warranty of any
-          kind. It is not affiliated with, endorsed by, or connected to Splitwise or any other
-          service. Balances and suggested settlements are for convenience only — please verify
-          amounts before sending or receiving money. You are responsible for the information you
-          enter and how you use it. Data is stored on Supabase.
+          SplitKaroo is a personal, non-commercial hobby project provided “as is” and “as
+          available”, without warranties of any kind. It is not affiliated with, endorsed by, or
+          connected to Splitwise or any other company. Balances and suggested settlements are for
+          convenience only, may contain errors, and are not financial advice — always verify amounts
+          before sending or receiving money. To the maximum extent permitted by law, the author is
+          not liable for any loss or corruption of data, service downtime, inaccuracies, or any
+          damages arising from use of the app. You use it entirely at your own risk and are
+          responsible for the information you enter and for keeping your own records.
         </AppText>
       </Card>
 

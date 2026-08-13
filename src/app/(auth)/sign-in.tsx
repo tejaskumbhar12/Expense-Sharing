@@ -74,6 +74,7 @@ export default function SignInScreen() {
             variant="ghost"
             onPress={() => router.push('/sign-up')}
           />
+          <Button title="About SplitKaroo" variant="ghost" onPress={() => router.push('/about')} />
         </View>
       </KeyboardAvoidingView>
     </Screen>

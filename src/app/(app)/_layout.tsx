@@ -14,7 +14,6 @@ export default function AppLayout() {
       }}
     >
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-      <Stack.Screen name="about" options={{ title: 'About' }} />
       <Stack.Screen name="new-group" options={{ presentation: 'modal', title: 'New group' }} />
       <Stack.Screen name="group/[id]/index" options={{ title: '' }} />
       <Stack.Screen name="group/[id]/add-member" options={{ presentation: 'modal', title: 'Add member' }} />

@@ -21,6 +21,8 @@ function RootNavigator() {
   useEffect(() => {
     if (loading) return;
     const inAuthGroup = segments[0] === '(auth)';
+    const isPublic = segments[0] === 'about'; // viewable logged in or out
+    if (isPublic) return;
     if (!session && !inAuthGroup) {
       router.replace('/sign-in');
     } else if (session && inAuthGroup) {
