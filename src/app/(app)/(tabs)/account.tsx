@@ -1,3 +1,4 @@
+import { useRouter } from 'expo-router';
 import { View } from 'react-native';
 
 import { AppText, Avatar, Button, Card, Screen } from '@/components/ui';
@@ -6,6 +7,7 @@ import { useAuth } from '@/lib/auth';
 import { isSupabaseConfigured } from '@/lib/supabase';
 
 export default function AccountScreen() {
+  const router = useRouter();
   const { user, signOut } = useAuth();
   const email = user?.email ?? 'unknown';
   const name = (user?.user_metadata?.full_name as string | undefined) || email;
@@ -28,6 +30,7 @@ export default function AccountScreen() {
         </Card>
       ) : null}
 
+      <Button title="About SplitKaroo" variant="ghost" onPress={() => router.push('/about')} />
       <Button title="Sign out" variant="secondary" onPress={() => signOut()} />
     </Screen>
   );
